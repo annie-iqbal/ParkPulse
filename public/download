@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>ParkWise AI - Analysis Result</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Insert Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#bc4800",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed": "#ffdbcd",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#574500",
+                    "primary-fixed": "#dbe1ff",
+                    "secondary-container": "#fed01b",
+                    "inverse-primary": "#b4c5ff",
+                    "on-primary-fixed": "#00174b",
+                    "on-background": "#0b1c30",
+                    "surface": "#f8f9ff",
+                    "surface-container": "#e5eeff",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed": "#231b00",
+                    "secondary": "#735c00",
+                    "outline-variant": "#c3c6d7",
+                    "on-secondary-container": "#6f5900",
+                    "on-tertiary-container": "#ffede6",
+                    "primary-container": "#2563eb",
+                    "surface-container-high": "#dce9ff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "secondary-fixed-dim": "#eec200",
+                    "on-tertiary-fixed-variant": "#7d2d00",
+                    "background": "#f8f9ff",
+                    "on-secondary": "#ffffff",
+                    "on-surface-variant": "#434655",
+                    "tertiary-fixed-dim": "#ffb596",
+                    "error": "#ba1a1a",
+                    "primary": "#004ac6",
+                    "on-primary-container": "#eeefff",
+                    "error-container": "#ffdad6",
+                    "surface-container-low": "#eff4ff",
+                    "surface-dim": "#cbdbf5",
+                    "surface-bright": "#f8f9ff",
+                    "on-error-container": "#93000a",
+                    "surface-variant": "#d3e4fe",
+                    "surface-tint": "#0053db",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "on-surface": "#0b1c30",
+                    "outline": "#737686",
+                    "on-tertiary-fixed": "#360f00",
+                    "surface-container-highest": "#d3e4fe",
+                    "secondary-fixed": "#ffe083",
+                    "tertiary": "#943700",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#213145"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "margin-mobile": "16px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "base": "4px",
+                    "sm": "8px",
+                    "2xl": "48px",
+                    "xl": "32px",
+                    "gutter": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display-status-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "display-status": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "display-status-mobile": ["36px", {"lineHeight": "40px", "fontWeight": "800"}],
+                    "headline-lg": ["30px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "display-status": ["48px", {"lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .status-success-border { border-top: 4px solid #22c55e; }
+        .status-error-border { border-top: 4px solid #ba1a1a; }
+        
+        body {
+            background-color: #f8f9ff;
+            color: #0b1c30;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .scroll-hide::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-inverse-surface w-full top-0 sticky border-b border-outline-variant dark:border-outline z-50">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-[600px] mx-auto">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="local_parking">local_parking</span>
+<span class="font-headline-md text-headline-md font-extrabold text-primary dark:text-primary-fixed-dim">ParkWise AI</span>
+</div>
+<button class="hover:opacity-80 transition-opacity active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-surface-variant" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</header>
+<main class="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg">
+<!-- Analysis Hero Card (Positive Result) -->
+<section class="bg-white rounded-xl shadow-[0_2px_10px_rgba(100,116,139,0.08)] border border-outline-variant mb-lg overflow-hidden status-success-border animate-in fade-in slide-in-from-bottom-4 duration-500">
+<div class="p-lg">
+<div class="flex items-center justify-between mb-sm">
+<span class="bg-green-100 text-green-800 text-label-sm font-label-sm px-3 py-1 rounded-full uppercase tracking-wider">Analysis Complete</span>
+<span class="text-on-surface-variant text-label-sm font-label-sm">Today, 2:14 PM</span>
+</div>
+<h1 class="font-display-status-mobile text-display-status-mobile text-green-600 mb-xs">YES, YOU CAN PARK</h1>
+<p class="text-on-surface-variant font-body-md mb-lg">Signs at this location currently permit parking for your vehicle type.</p>
+<div class="flex flex-wrap gap-sm">
+<div class="flex items-center gap-xs bg-surface-container px-3 py-2 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="schedule">schedule</span>
+<span class="font-label-lg text-label-lg">Max 2 Hours</span>
+</div>
+<div class="flex items-center gap-xs bg-surface-container px-3 py-2 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="event_available">event_available</span>
+<span class="font-label-lg text-label-lg">Until 4:00 PM</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Details -->
+<div class="grid grid-cols-2 gap-md mb-lg">
+<!-- School Zone Logic Card -->
+<div class="col-span-2 bg-white rounded-xl p-md border border-outline-variant shadow-sm flex items-start gap-md">
+<div class="bg-secondary-container p-3 rounded-lg">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="school" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm mb-1">School Zone Active</h3>
+<p class="text-on-surface-variant text-body-md">Currently 2:14 PM on a School Day. Strict 2-minute pickup/drop-off rules will apply from 2:30 PM.</p>
+</div>
+</div>
+<!-- Public Holiday Logic Card -->
+<div class="bg-white rounded-xl p-md border border-outline-variant shadow-sm flex flex-col gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="calendar_today">calendar_today</span>
+<h3 class="font-label-lg text-label-lg">Public Holiday</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm">Normal Thursday rules apply. Today is not a gazetted holiday.</p>
+</div>
+<!-- Location Snapshot -->
+<div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden relative min-h-[140px]">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A clean, minimalist high-angle architectural map view of a Melbourne street corner with clear parking bay markings, rendered in a crisp digital vector style with soft blue and grey tones. The scene is bright and professional." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAHZjiKHU2WpsRBK0OdGNJz_NziIOUwbipgzQbw2F73DUTKtQ5DtmGs3DVZZvY8GnxOVwhFVLZto6GKxIwqxmuCDC2_pjntryEI3EP_jNb7y91jADbjVo5snCDberPQZFX0ghYPSwDq88dHDliqCPYbtSpmdKtjxETnPua9bn0KNFNNRc6wlUzce0qrrB1haFSYTC7FAOqnu-EYPBBSfvLZzpetgKEtOglGwYhvq1P5VY0noL1haF9-ZWK1WSkLPJg2SEwTwtEjC1U')"></div>
+<div class="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm p-2">
+<p class="text-label-sm font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span> 
+                        Bourke St, Melbourne
+                    </p>
+</div>
+</div>
+</div>
+<!-- Compliance Check List -->
+<div class="bg-surface-container-low rounded-xl p-lg border border-outline-variant mb-xl">
+<h2 class="font-headline-sm text-headline-sm mb-md">Regulatory Breakdown</h2>
+<ul class="space-y-md">
+<li class="flex items-start gap-md">
+<span class="material-symbols-outlined text-green-600 mt-1" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<p class="font-label-lg text-label-lg">Clearway Status</p>
+<p class="text-on-surface-variant text-label-sm font-label-sm">No clearway active until 4:30 PM.</p>
+</div>
+</li>
+<li class="flex items-start gap-md">
+<span class="material-symbols-outlined text-green-600 mt-1" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<p class="font-label-lg text-label-lg">Permit Zones</p>
+<p class="text-on-surface-variant text-label-sm font-label-sm">Not in a Residential Permit Area.</p>
+</div>
+</li>
+<li class="flex items-start gap-md">
+<span class="material-symbols-outlined text-on-surface-variant mt-1" data-icon="info">info</span>
+<div>
+<p class="font-label-lg text-label-lg">Parking Fee</p>
+<p class="text-on-surface-variant text-label-sm font-label-sm">$5.50/hour via PayStay App (Zone 30021).</p>
+</div>
+</li>
+</ul>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-primary py-4 rounded-xl flex items-center justify-center gap-md text-on-primary font-headline-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-lg">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+            Start Parking Session
+        </button>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] flex justify-around items-center py-sm px-md pb-safe bg-surface dark:bg-inverse-surface shadow-[0_-2px_10px_rgba(100,116,139,0.08)] z-50 rounded-t-xl">
+<!-- Scan (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="photo_camera">photo_camera</span>
+<span class="font-label-sm text-label-sm-mobile">Scan</span>
+</button>
+<!-- Activity (Active Selection - Logic: Scanning is an activity flow) -->
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-5 py-1 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="history" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-sm text-label-sm-mobile">Activity</span>
+</button>
+<!-- Settings (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm-mobile">Settings</span>
+</button>
+</nav>
+<!-- Micro-interaction Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Button press vibration simulation
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (window.navigator.vibrate) {
+                        window.navigator.vibrate(5);
+                    }
+                });
+            });
+
+            // Intersection Observer for scroll reveal
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('opacity-100');
+                        entry.target.classList.remove('opacity-0', 'translate-y-4');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.shadow-sm').forEach(el => {
+                el.classList.add('transition-all', 'duration-700', 'opacity-0', 'translate-y-4');
+                observer.observe(el);
+            });
+        });
+    </script>
+</body></html>
