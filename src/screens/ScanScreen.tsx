@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { getCurrentPosition, checkPublicHoliday } from '../lib/geolocation';
 import { ParkingAnalysis } from '../types';
@@ -33,13 +33,22 @@ async function extractEdgeFunctionError(error: unknown): Promise<string> {
 }
 
 export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [errorDetail, setErrorDetail] = useState('');
+  const [currentLocation, setCurrentLocation] = useState('Getting location...');
+
+  useEffect(() => {
+    // Load current location on mount
+    getCurrentPosition()
+      .then(pos => setCurrentLocation(pos.address))
+      .catch(() => setCurrentLocation('Your Location'));
+  }, []);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -58,7 +67,8 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
     setScanState('idle');
     setErrorMessage('');
     setErrorDetail('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
   }
 
   async function fileToBase64(file: File): Promise<string> {
@@ -159,12 +169,12 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg flex flex-col">
+    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-xs flex flex-col">
       {/* Landing Screen - Idle State */}
       {scanState === 'idle' && (
         <>
           {/* Hero Card */}
-          <div className="bg-primary-fixed-dim rounded-xl p-xl mb-lg border border-primary-container">
+          <div className="bg-primary-fixed-dim rounded-xl p-xl border border-primary-container">
             <h2 className="text-display-status-mobile font-extrabold text-primary mb-md">Can I Park Here?</h2>
             <p className="text-body-lg text-on-surface mb-xl">
               Upload or snap a photo of the nearby parking sign. Our AI engine analyzes local regulations in real-time for instant clarity.
@@ -173,14 +183,14 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
             {/* Action Buttons */}
             <div className="space-y-md">
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => cameraInputRef.current?.click()}
                 className="w-full bg-primary text-on-primary py-4 rounded-lg flex items-center justify-center gap-md text-headline-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>photo_camera</span>
                 Scan Parking Sign
               </button>
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => uploadInputRef.current?.click()}
                 className="w-full bg-surface-container-lowest text-on-surface py-4 rounded-lg flex items-center justify-center gap-md text-headline-sm font-semibold hover:bg-surface-container-low active:scale-95 transition-all border border-outline-variant"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>upload_file</span>
@@ -190,7 +200,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
           </div>
 
           {/* Current Status Card */}
-          <div className="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm">
+          <div className="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm mt-xs">
             <p className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold mb-md">Current Status</p>
             <p className="text-display-status-mobile font-extrabold text-primary mb-xs">{timeStr}</p>
             <p className="text-label-lg text-on-surface-variant mb-lg">{dateStr}</p>
@@ -198,15 +208,22 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
               <div className="w-10 h-10 rounded-lg bg-primary-fixed-dim flex items-center justify-center flex-shrink-0">
                 <span className="material-symbols-outlined text-primary">location_on</span>
               </div>
-              <p className="text-label-lg text-on-surface font-medium">Downtown District 4</p>
+              <p className="text-label-lg text-on-surface font-medium">{currentLocation}</p>
             </div>
           </div>
 
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="image/*"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -261,10 +278,17 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
             </div>
 
             <input
-              ref={fileInputRef}
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <input
+              ref={uploadInputRef}
+              type="file"
+              accept="image/*"
               className="hidden"
               onChange={handleFileChange}
             />

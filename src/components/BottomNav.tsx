@@ -1,4 +1,4 @@
-type Tab = 'scan' | 'activity' | 'settings';
+type Tab = 'check' | 'settings';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -11,16 +11,9 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
       <NavItem
         icon="search"
         label="Check"
-        active={activeTab === 'scan'}
-        onClick={() => onTabChange('scan')}
-        filled={activeTab === 'scan'}
-      />
-      <NavItem
-        icon="history"
-        label="Activity"
-        active={activeTab === 'activity'}
-        onClick={() => onTabChange('activity')}
-        filled={activeTab === 'activity'}
+        active={activeTab === 'check'}
+        onClick={() => onTabChange('check')}
+        filled={activeTab === 'check'}
       />
       <NavItem
         icon="settings"
@@ -46,7 +39,7 @@ function NavItem({ icon, label, active, onClick, filled }: NavItemProps) {
     return (
       <button
         onClick={onClick}
-        className="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1 active:scale-90 transition-all duration-200 min-w-[72px]"
+        className="flex flex-col items-center justify-center bg-primary text-on-primary rounded-full px-5 py-1 active:scale-90 transition-all duration-200 min-w-[72px]"
       >
         <span
           className="material-symbols-outlined text-[22px]"

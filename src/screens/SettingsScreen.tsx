@@ -1,14 +1,27 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+
+interface ParkingSession {
+  id: string;
+  location: string;
+  zone: string;
+  started_at: string;
+  expires_at: string;
+  status: 'active' | 'expired' | 'cancelled';
+}
 
 interface SettingsScreenProps {
   showHelp?: () => void;
+  onRestoreSession?: (sessionId: string) => void;
 }
 
-export function SettingsScreen({ showHelp }: SettingsScreenProps) {
+export function SettingsScreen({ showHelp, onRestoreSession }: SettingsScreenProps) {
   const [appVersion] = useState('1.0.0');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationTracking, setLocationTracking] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [sessions, setSessions] = useState<ParkingSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   useEffect(() => {
     // Load user preferences from localStorage
@@ -19,6 +32,30 @@ export function SettingsScreen({ showHelp }: SettingsScreenProps) {
       setLocationTracking(settings.locationTracking ?? true);
       setDarkMode(settings.darkMode ?? false);
     }
+  }, []);
+
+  useEffect(() => {
+    // Fetch parking sessions from Supabase
+    const fetchSessions = async () => {
+      try {
+        setLoadingSessions(true);
+        const { data, error } = await supabase
+          .from('parking_sessions')
+          .select('*')
+          .order('started_at', { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+        setSessions(data || []);
+      } catch (error) {
+        console.error('Error fetching parking sessions:', error);
+        setSessions([]);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+
+    fetchSessions();
   }, []);
 
   const saveSettings = (key: string, value: boolean) => {
@@ -47,6 +84,10 @@ export function SettingsScreen({ showHelp }: SettingsScreenProps) {
     const newValue = !darkMode;
     setDarkMode(newValue);
     saveSettings('darkMode', newValue);
+    
+    // Dispatch custom event for immediate update in same tab
+    const event = new CustomEvent('darkModeToggled', { detail: newValue });
+    window.dispatchEvent(event);
   };
 
   return (
@@ -135,6 +176,74 @@ export function SettingsScreen({ showHelp }: SettingsScreenProps) {
               </label>
             </div>
           </div>
+        </section>
+
+        {/* Parking History Section */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+          <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
+            <span className="material-symbols-outlined text-primary">history</span>
+            Parking History
+          </h2>
+          {loadingSessions ? (
+            <p className="text-body-md text-on-surface-variant">Loading history...</p>
+          ) : sessions.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">No parking sessions yet</p>
+          ) : (
+            <div className="space-y-sm">
+              {sessions.map((session) =>
+                session.status === 'active' ? (
+                  <button
+                    key={session.id}
+                    onClick={() => onRestoreSession?.(session.id)}
+                    className="w-full text-left bg-surface-container p-md rounded-lg border border-outline-variant hover:bg-surface-container-high active:scale-95 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between mb-xs">
+                      <div className="flex-1">
+                        <p className="text-label-lg font-semibold text-on-surface">{session.location}</p>
+                        <p className="text-label-sm text-on-surface-variant">
+                          {new Date(session.started_at).toLocaleDateString()} at{' '}
+                          {new Date(session.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <span className="text-label-xs font-semibold px-sm py-xs rounded-full bg-success-container text-on-success-container">
+                        Active
+                      </span>
+                    </div>
+                    {session.zone && (
+                      <p className="text-label-sm text-on-surface-variant">Zone: {session.zone}</p>
+                    )}
+                  </button>
+                ) : (
+                  <div
+                    key={session.id}
+                    className="bg-surface-container p-md rounded-lg border border-outline-variant opacity-70"
+                  >
+                    <div className="flex items-start justify-between mb-xs">
+                      <div className="flex-1">
+                        <p className="text-label-lg font-semibold text-on-surface">{session.location}</p>
+                        <p className="text-label-sm text-on-surface-variant">
+                          {new Date(session.started_at).toLocaleDateString()} at{' '}
+                          {new Date(session.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-label-xs font-semibold px-sm py-xs rounded-full ${
+                          session.status === 'expired'
+                            ? 'bg-error-container text-on-error-container'
+                            : 'bg-outline-variant text-on-surface-variant'
+                        }`}
+                      >
+                        {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                      </span>
+                    </div>
+                    {session.zone && (
+                      <p className="text-label-sm text-on-surface-variant">Zone: {session.zone}</p>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+          )}
         </section>
 
         {/* Help & Support Section */}

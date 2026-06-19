@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TopAppBar } from './components/TopAppBar';
 import { BottomNav } from './components/BottomNav';
 import { ScanScreen } from './screens/ScanScreen';
@@ -7,7 +7,7 @@ import { ActiveSession } from './screens/ActiveSession';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ParkingAnalysis } from './types';
 
-type Tab = 'scan' | 'activity' | 'settings';
+type Tab = 'check' | 'settings';
 
 type Screen =
   | { name: 'scan' }
@@ -15,50 +15,103 @@ type Screen =
   | { name: 'active-session'; sessionId: string };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('scan');
+  const [activeTab, setActiveTab] = useState<Tab>('check');
   const [screen, setScreen] = useState<Screen>({ name: 'scan' });
   const [lastSessionId, setLastSessionId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Load dark mode setting and apply to document
+  useEffect(() => {
+    const loadDarkModeSetting = () => {
+      const saved = localStorage.getItem('parkwise_settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        const isDarkMode = settings.darkMode ?? false;
+        setDarkMode(isDarkMode);
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    };
+
+    loadDarkModeSetting();
+
+    // Listen for storage changes (when settings are changed in SettingsScreen)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'parkwise_settings' && e.newValue) {
+        const settings = JSON.parse(e.newValue);
+        const isDarkMode = settings.darkMode ?? false;
+        setDarkMode(isDarkMode);
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Also listen for changes in the same tab using a custom event
+  useEffect(() => {
+    const handleDarkModeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setDarkMode(customEvent.detail);
+      if (customEvent.detail) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    window.addEventListener('darkModeToggled', handleDarkModeChange);
+    return () => window.removeEventListener('darkModeToggled', handleDarkModeChange);
+  }, []);
 
   function handleAnalysisComplete(analysis: ParkingAnalysis) {
     setScreen({ name: 'analysis', analysis });
-    setActiveTab('activity');
   }
 
   function handleSessionStart(sessionId: string) {
     setLastSessionId(sessionId);
     setScreen({ name: 'active-session', sessionId });
-    setActiveTab('activity');
   }
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
-    if (tab === 'scan') {
-      setScreen({ name: 'scan' });
-    } else if (tab === 'activity') {
+    if (tab === 'check') {
+      // If there's an active session, show that instead of scan screen
       if (lastSessionId) {
         setScreen({ name: 'active-session', sessionId: lastSessionId });
-      } else if (screen.name === 'analysis') {
-        // stay on analysis
       } else {
         setScreen({ name: 'scan' });
       }
-    } else if (tab === 'settings') {
-      // stay on current screen, just show settings tab as active
     }
+    // settings tab doesn't change screen
+  }
+
+  function handleRestoreSession(sessionId: string) {
+    setLastSessionId(sessionId);
+    setScreen({ name: 'active-session', sessionId });
+    setActiveTab('check');
   }
 
   function handleStopSession() {
     setLastSessionId(null);
     setScreen({ name: 'scan' });
-    setActiveTab('scan');
+    setActiveTab('check');
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
       <TopAppBar onHelpClick={() => setShowHelp(true)} />
 
-      {activeTab !== 'settings' && (
+      {activeTab === 'check' && (
         <>
           {screen.name === 'scan' && (
             <ScanScreen onAnalysisComplete={handleAnalysisComplete} />
@@ -82,7 +135,7 @@ export default function App() {
       )}
 
       {activeTab === 'settings' && (
-        <SettingsScreen showHelp={() => setShowHelp(true)} />
+        <SettingsScreen showHelp={() => setShowHelp(true)} onRestoreSession={handleRestoreSession} />
       )}
 
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
@@ -123,14 +176,14 @@ export default function App() {
               <div>
                 <h4 className="text-title-sm font-semibold mb-2">Monitor Your Session</h4>
                 <p className="text-body-md text-on-surface-variant">
-                  View your active parking session in the Activity tab. A countdown timer shows remaining time, and a map displays your parking location.
+                  After starting a session, a countdown timer shows remaining time, and a map displays your parking location.
                 </p>
               </div>
 
               <div>
-                <h4 className="text-title-sm font-semibold mb-2">Get Reminders</h4>
+                <h4 className="text-title-sm font-semibold mb-2">View Parking History</h4>
                 <p className="text-body-md text-on-surface-variant">
-                  Enable the 15-minute reminder toggle when starting a session to get notified before your parking time expires.
+                  In Settings, you can view your parking history. Tap any active session to resume monitoring it. Cancelled and expired sessions are shown for reference only.
                 </p>
               </div>
             </div>

@@ -157,28 +157,16 @@ export function ActiveSession({ sessionId, onStopSession }: ActiveSessionProps) 
         </div>
       </section>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-3 gap-md mb-lg">
-        <button className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col items-center justify-center gap-sm active:scale-95 transition-transform hover:bg-surface-container-low">
-          <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-secondary-container">directions_car</span>
-          </div>
-          <span className="text-label-lg font-semibold text-on-surface">Find My Car</span>
-        </button>
-        <button className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col items-center justify-center gap-sm active:scale-95 transition-transform hover:bg-surface-container-low">
-          <div className="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-tertiary-fixed-variant">add_home</span>
-          </div>
-          <span className="text-label-lg font-semibold text-on-surface">Add More Time</span>
-        </button>
+      {/* Action Button */}
+      <div className="mb-lg">
         <button 
           onClick={handleStopSession}
-          className="bg-surface-container-lowest border border-error p-lg rounded-xl flex flex-col items-center justify-center gap-sm active:scale-95 transition-transform hover:bg-error/10"
+          className="w-full bg-surface-container-lowest border border-error p-lg rounded-xl flex items-center justify-center gap-md active:scale-95 transition-transform hover:bg-error/10"
         >
           <div className="w-12 h-12 rounded-full bg-error/20 flex items-center justify-center">
             <span className="material-symbols-outlined text-error">stop_circle</span>
           </div>
-          <span className="text-label-lg font-semibold text-error">Stop Session</span>
+          <span className="text-headline-sm font-semibold text-error">Stop Session</span>
         </button>
       </div>
 
