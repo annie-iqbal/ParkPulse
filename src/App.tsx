@@ -121,10 +121,6 @@ export default function App() {
             <AnalysisResult
               analysis={screen.analysis}
               onSessionStart={handleSessionStart}
-              onRescan={() => {
-                setScreen({ name: 'scan' });
-                setActiveTab('scan');
-              }}
             />
           )}
 

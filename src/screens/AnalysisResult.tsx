@@ -6,7 +6,6 @@ import { ParkingAnalysis } from '../types';
 interface AnalysisResultProps {
   analysis: ParkingAnalysis;
   onSessionStart: (sessionId: string) => void;
-  onRescan: () => void;
 }
 function getVerdictColor(canPark: boolean) {
   return canPark ? 'tertiary' : 'error';
@@ -16,7 +15,7 @@ function getVerdictIcon(canPark: boolean) {
   return canPark ? 'check_circle' : 'error';
 }
 
-export function AnalysisResult({ analysis, onSessionStart, onRescan }: AnalysisResultProps) {
+export function AnalysisResult({ analysis, onSessionStart }: AnalysisResultProps) {
   const [loading, setLoading] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(true);
 
@@ -238,24 +237,16 @@ export function AnalysisResult({ analysis, onSessionStart, onRescan }: AnalysisR
         </details>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-md fixed bottom-24 left-0 right-0 max-w-[600px] mx-auto px-margin-mobile">
-        <button
-          onClick={onRescan}
-          className="flex-1 border border-outline-variant bg-surface-container-lowest py-3 rounded-lg flex items-center justify-center gap-xs text-on-surface text-label-lg font-semibold hover:bg-surface-container-low active:scale-95 transition-all shadow-sm"
-        >
-          <span className="material-symbols-outlined">photo_camera</span>
-          <span className="hidden sm:inline">Scan Again</span>
-        </button>
-
+      {/* Action Button */}
+      <div className="fixed bottom-24 left-0 right-0 max-w-[600px] mx-auto px-margin-mobile">
         {analysis.canPark && (
           <button
             onClick={handleStartSession}
             disabled={loading}
-            className="flex-1 bg-primary py-3 rounded-lg flex items-center justify-center gap-xs text-on-primary text-label-lg font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-70"
+            className="w-full bg-primary py-3 rounded-lg flex items-center justify-center gap-sm text-on-primary text-headline-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-70"
           >
             <span className="material-symbols-outlined">timer</span>
-            <span className="hidden sm:inline">{loading ? 'Starting...' : 'Start Session'}</span>
+            <span>{loading ? 'Starting...' : 'Start Session'}</span>
           </button>
         )}
       </div>
