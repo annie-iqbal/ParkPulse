@@ -3,6 +3,7 @@ import { supabase, ParkingSession } from '../lib/supabase';
 
 interface ActiveSessionProps {
   sessionId: string;
+  onStopSession?: () => void;
 }
 
 const RADIUS = 110;
@@ -23,7 +24,7 @@ function formatEndTime(isoStr: string): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-export function ActiveSession({ sessionId }: ActiveSessionProps) {
+export function ActiveSession({ sessionId, onStopSession }: ActiveSessionProps) {
   const [session, setSession] = useState<ParkingSession | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
   const [reminderEnabled, setReminderEnabled] = useState(true);
@@ -70,6 +71,17 @@ export function ActiveSession({ sessionId }: ActiveSessionProps) {
       .update({ reminder_enabled: next })
       .eq('id', sessionId);
     setTogglingReminder(false);
+  }
+
+  async function handleStopSession() {
+    if (!session) return;
+    // Update session status to cancelled
+    await supabase
+      .from('parking_sessions')
+      .update({ status: 'cancelled' })
+      .eq('id', sessionId);
+    // Call the callback to navigate away
+    onStopSession?.();
   }
 
   const progressPercent = TOTAL_DURATION_MS > 0 ? remainingMs / TOTAL_DURATION_MS : 0;
@@ -146,7 +158,7 @@ export function ActiveSession({ sessionId }: ActiveSessionProps) {
       </section>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-md mb-lg">
+      <div className="grid grid-cols-3 gap-md mb-lg">
         <button className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col items-center justify-center gap-sm active:scale-95 transition-transform hover:bg-surface-container-low">
           <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center">
             <span className="material-symbols-outlined text-on-secondary-container">directions_car</span>
@@ -158,6 +170,15 @@ export function ActiveSession({ sessionId }: ActiveSessionProps) {
             <span className="material-symbols-outlined text-on-tertiary-fixed-variant">add_home</span>
           </div>
           <span className="text-label-lg font-semibold text-on-surface">Add More Time</span>
+        </button>
+        <button 
+          onClick={handleStopSession}
+          className="bg-surface-container-lowest border border-error p-lg rounded-xl flex flex-col items-center justify-center gap-sm active:scale-95 transition-transform hover:bg-error/10"
+        >
+          <div className="w-12 h-12 rounded-full bg-error/20 flex items-center justify-center">
+            <span className="material-symbols-outlined text-error">stop_circle</span>
+          </div>
+          <span className="text-label-lg font-semibold text-error">Stop Session</span>
         </button>
       </div>
 

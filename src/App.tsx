@@ -45,6 +45,12 @@ export default function App() {
     }
   }
 
+  function handleStopSession() {
+    setLastSessionId(null);
+    setScreen({ name: 'scan' });
+    setActiveTab('scan');
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
       <TopAppBar onHelpClick={() => setShowHelp(true)} />
@@ -65,14 +71,14 @@ export default function App() {
       )}
 
       {screen.name === 'active-session' && (
-        <ActiveSession sessionId={screen.sessionId} />
+        <ActiveSession sessionId={screen.sessionId} onStopSession={handleStopSession} />
       )}
 
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {showHelp && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full max-w-[600px] mx-auto bg-surface rounded-t-3xl p-6 max-h-[70vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">​​
+          <div className="bg-surface rounded-3xl p-6 max-h-[80vh] overflow-y-auto w-full max-w-[540px] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">​​
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-headline-sm font-bold">Help</h2>
               <button
