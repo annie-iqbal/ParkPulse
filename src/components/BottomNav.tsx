@@ -1,4 +1,4 @@
-type Tab = 'scan' | 'activity';
+type Tab = 'scan' | 'activity' | 'settings';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -19,7 +19,14 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         label="Activity"
         active={activeTab === 'activity'}
         onClick={() => onTabChange('activity')}
-        filled
+        filled={activeTab === 'activity'}
+      />
+      <NavItem
+        icon="settings"
+        label="Settings"
+        active={activeTab === 'settings'}
+        onClick={() => onTabChange('settings')}
+        filled={activeTab === 'settings'}
       />
     </nav>
   );

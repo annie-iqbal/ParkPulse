@@ -1,56 +1,24 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { getCurrentPosition } from '../lib/geolocation';
-import { ParkingAnalysis, RegulatoryItem } from '../types';
+import { ParkingAnalysis } from '../types';
 
 interface AnalysisResultProps {
   analysis: ParkingAnalysis;
   onSessionStart: (sessionId: string) => void;
   onRescan: () => void;
 }
+function getVerdictColor(canPark: boolean) {
+  return canPark ? 'tertiary' : 'error';
+}
 
-function RegulatoryIcon({ status }: { status: RegulatoryItem['status'] }) {
-  if (status === 'ok') {
-    return (
-      <span
-        className="material-symbols-outlined text-green-600 mt-0.5 flex-shrink-0"
-        style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
-      >
-        check_circle
-      </span>
-    );
-  }
-  if (status === 'error') {
-    return (
-      <span
-        className="material-symbols-outlined text-error mt-0.5 flex-shrink-0"
-        style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
-      >
-        cancel
-      </span>
-    );
-  }
-  if (status === 'warning') {
-    return (
-      <span
-        className="material-symbols-outlined text-amber-500 mt-0.5 flex-shrink-0"
-        style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
-      >
-        warning
-      </span>
-    );
-  }
-  return (
-    <span className="material-symbols-outlined text-on-surface-variant mt-0.5 flex-shrink-0">info</span>
-  );
+function getVerdictIcon(canPark: boolean) {
+  return canPark ? 'check_circle' : 'error';
 }
 
 export function AnalysisResult({ analysis, onSessionStart, onRescan }: AnalysisResultProps) {
   const [loading, setLoading] = useState(false);
-
-  const borderColor = analysis.canPark ? 'border-t-green-500' : 'border-t-error';
-  const verdictColor = analysis.canPark ? 'text-green-600' : 'text-error';
-  const badgeBg = analysis.canPark ? 'bg-green-100 text-green-800' : 'bg-error-container text-on-error-container';
+  const [reminderEnabled, setReminderEnabled] = useState(true);
 
   async function handleStartSession() {
     if (!analysis.canPark) return;
@@ -101,7 +69,7 @@ export function AnalysisResult({ analysis, onSessionStart, onRescan }: AnalysisR
         zone: '',
         started_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
-        reminder_enabled: true,
+        reminder_enabled: reminderEnabled,
         status: 'active',
         lat,
         lng,
@@ -115,92 +83,135 @@ export function AnalysisResult({ analysis, onSessionStart, onRescan }: AnalysisR
 
   return (
     <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg">
-
-      {/* Result Hero Card */}
-      <section
-        className={`bg-white rounded-xl shadow-[0_2px_10px_rgba(100,116,139,0.08)] border border-outline-variant mb-lg overflow-hidden border-t-4 ${borderColor} animate-fade-in-up`}
-      >
-        <div className="p-lg">
-          <div className="flex items-center justify-between mb-sm">
-            <span className={`text-label-sm px-3 py-1 rounded-full uppercase tracking-wider font-semibold ${badgeBg}`}>
-              Analysis Complete
-            </span>
-            <span className="text-on-surface-variant text-label-sm">{analysis.analysisTime}</span>
-          </div>
-          <h1 className={`text-display-status-mobile font-extrabold mb-xs ${verdictColor}`}>
-            {analysis.verdict}
-          </h1>
-          <p className="text-on-surface-variant text-body-md mb-lg">{analysis.description}</p>
-
-          {(analysis.maxDuration || analysis.until) && (
-            <div className="flex flex-wrap gap-sm">
-              {analysis.maxDuration && (
-                <div className="flex items-center gap-xs bg-surface-container px-3 py-2 rounded-lg border border-outline-variant">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>schedule</span>
-                  <span className="text-label-lg font-semibold">Max {analysis.maxDuration}</span>
-                </div>
-              )}
-              {analysis.until && (
-                <div className="flex items-center gap-xs bg-surface-container px-3 py-2 rounded-lg border border-outline-variant">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>event_available</span>
-                  <span className="text-label-lg font-semibold">Until {analysis.until}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Header Section with Breadcrumb */}
+      <section className="mb-xl">
+        <nav className="flex items-center gap-xs mb-md text-on-surface-variant text-label-sm">
+          <span>Analysis</span>
+          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+          <span className="text-primary font-semibold">Result</span>
+        </nav>
+        <h1 className="text-display-status-mobile font-extrabold mb-sm text-on-surface">
+          {analysis.verdict}
+        </h1>
+        <p className="text-body-lg text-on-surface-variant max-w-2xl">{analysis.description}</p>
       </section>
 
-      {/* Context Cards */}
-      {analysis.contextCards.length > 0 && (
-        <div className="grid grid-cols-2 gap-md mb-lg">
-          {analysis.contextCards.map((card, i) => (
-            <div
-              key={i}
-              className={`bg-white rounded-xl p-md border border-outline-variant shadow-sm flex items-start gap-md animate-fade-in-up ${card.colSpan === 2 ? 'col-span-2' : ''}`}
-              style={{ animationDelay: `${(i + 1) * 60}ms` }}
-            >
-              <div
-                className="p-3 rounded-lg flex-shrink-0"
-                style={{ backgroundColor: card.iconBg ?? '#e5eeff' }}
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-md mb-lg">
+        {/* Success Status Card - Full Width or Half */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl flex flex-col items-center justify-center relative overflow-hidden shadow-sm md:col-span-1">
+          <div className={`absolute top-0 left-0 w-full h-1 ${analysis.canPark ? 'bg-tertiary-container' : 'bg-error'}`} />
+          
+          <div className="relative mb-xl mt-lg">
+            <div className={`absolute inset-0 ${analysis.canPark ? 'bg-tertiary-container' : 'bg-error'} opacity-20 rounded-full animate-pulse-subtle scale-150`}></div>
+            <div className={`w-24 h-24 ${analysis.canPark ? 'bg-tertiary-container' : 'bg-error-container'} rounded-full flex items-center justify-center relative z-10`}>
+              <span 
+                className="material-symbols-outlined text-headline-lg"
+                style={{
+                  color: analysis.canPark ? '#ffffff' : '#93000a',
+                  fontVariationSettings: "'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 24"
+                }}
               >
-                <span
-                  className="material-symbols-outlined"
-                  style={{
-                    color: card.iconColor ?? '#004ac6',
-                    fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24",
-                  }}
-                >
-                  {card.icon}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-headline-sm font-semibold mb-1">{card.title}</h3>
-                <p className="text-on-surface-variant text-body-md">{card.description}</p>
-              </div>
+                {getVerdictIcon(analysis.canPark)}
+              </span>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
-      {/* Location row */}
+          <h2 className="text-headline-md font-bold text-on-surface mb-xs text-center">
+            {analysis.canPark ? 'Safe to Park' : 'Cannot Park'}
+          </h2>
+          <p className="text-label-sm text-on-surface-variant text-center">
+            {analysis.canPark ? 'Permitted until' : 'Restricted until'}{' '}
+            <span className="text-primary font-bold">{analysis.until ?? 'Unknown'}</span>
+          </p>
+
+          <button 
+            onClick={() => !analysis.canPark || setReminderEnabled(!reminderEnabled)}
+            disabled={!analysis.canPark}
+            className={`w-full mt-lg py-3 rounded-lg font-label-md flex items-center justify-center gap-sm shadow-md transition-all active:scale-95 ${
+              analysis.canPark 
+                ? reminderEnabled ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-container-high text-on-surface-variant hover:opacity-90'
+                : 'bg-surface-container-high text-on-surface-variant opacity-50 cursor-not-allowed'
+            }`}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{reminderEnabled ? 'notifications_active' : 'notifications_off'}</span>
+            {analysis.canPark ? (reminderEnabled ? 'Reminder ON' : 'Reminder OFF') : 'Set Reminder'}
+          </button>
+        </div>
+
+        {/* Rules & Details Card */}
+        <div className="bg-surface-container border border-outline-variant rounded-xl p-lg shadow-sm md:col-span-1">
+          <div className="flex items-start justify-between mb-lg">
+            <div>
+              <p className="text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs font-semibold">Zone Regulations</p>
+              <h3 className="text-headline-md font-bold text-on-surface">
+                {analysis.maxDuration || 'No Limit'}
+              </h3>
+            </div>
+            <div className="bg-surface-bright p-md rounded-lg border border-outline-variant">
+              <span className="material-symbols-outlined text-primary">schedule</span>
+            </div>
+          </div>
+
+          <div className="space-y-md">
+            {analysis.maxDuration && (
+              <div className="flex items-center gap-md">
+                <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>timer</span>
+                </div>
+                <div>
+                  <p className="text-label-lg font-semibold text-on-surface">Maximum Duration</p>
+                  <p className="text-on-surface-variant text-label-sm">Standard limit for parking in this zone</p>
+                </div>
+              </div>
+            )}
+            {analysis.contextCards.length > 0 && (
+              <div className="flex items-center gap-md">
+                <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>info</span>
+                </div>
+                <div>
+                  <p className="text-label-lg font-semibold text-on-surface">Active Hours</p>
+                  <p className="text-on-surface-variant text-label-sm">{analysis.contextCards[0]?.description || 'Check local regulations'}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Location Card */}
       {analysis.location && analysis.location !== 'Unknown location' && (
-        <div className="flex items-center gap-sm bg-surface-container-low rounded-xl px-md py-sm border border-outline-variant mb-lg">
-          <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>location_on</span>
-          <span className="text-label-lg text-on-surface-variant">{analysis.location}</span>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg mb-lg flex items-start gap-md shadow-sm">
+          <div className="w-12 h-12 rounded-lg bg-primary-fixed-dim flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: '24px' }}>location_on</span>
+          </div>
+          <div>
+            <p className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold mb-xs">Current Area</p>
+            <h4 className="text-headline-sm font-bold text-on-surface">{analysis.location}</h4>
+          </div>
         </div>
       )}
 
       {/* Regulatory Breakdown */}
       {analysis.regulatoryBreakdown.length > 0 && (
-        <div className="bg-surface-container-low rounded-xl p-lg border border-outline-variant mb-lg animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <h2 className="text-headline-sm font-semibold mb-md">Regulatory Breakdown</h2>
+        <div className="bg-surface-container-low rounded-xl p-lg mb-lg border border-outline-variant">
+          <h3 className="text-headline-sm font-bold text-on-surface mb-md">Regulatory Breakdown</h3>
           <ul className="space-y-md">
-            {analysis.regulatoryBreakdown.map((item, i) => (
+            {analysis.regulatoryBreakdown.slice(0, 4).map((item, i) => (
               <li key={i} className="flex items-start gap-md">
-                <RegulatoryIcon status={item.status} />
+                <div className="flex-shrink-0 mt-1">
+                  <span
+                    className="material-symbols-outlined text-[20px]"
+                    style={{
+                      color: item.status === 'ok' ? '#228B22' : item.status === 'error' ? '#ba1a1a' : item.status === 'warning' ? '#b3661f' : '#554336',
+                      fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24"
+                    }}
+                  >
+                    {item.status === 'ok' ? 'check_circle' : item.status === 'error' ? 'cancel' : item.status === 'warning' ? 'warning' : 'info'}
+                  </span>
+                </div>
                 <div>
-                  <p className="text-label-lg font-semibold">{item.title}</p>
+                  <p className="text-label-lg font-semibold text-on-surface">{item.title}</p>
                   <p className="text-on-surface-variant text-label-sm">{item.detail}</p>
                 </div>
               </li>
@@ -209,42 +220,42 @@ export function AnalysisResult({ analysis, onSessionStart, onRescan }: AnalysisR
         </div>
       )}
 
-      {/* Raw sign text (collapsible) */}
+      {/* Sign Text (Collapsible) */}
       {analysis.rawSignText && (
-        <details className="bg-white rounded-xl border border-outline-variant mb-lg group">
-          <summary className="p-md flex items-center justify-between cursor-pointer select-none list-none">
+        <details className="bg-surface-container-lowest rounded-xl border border-outline-variant mb-lg group">
+          <summary className="p-lg flex items-center justify-between cursor-pointer select-none list-none hover:bg-surface-container-low transition-colors">
             <div className="flex items-center gap-sm">
-              <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '18px' }}>text_snippet</span>
-              <span className="text-label-lg font-semibold">Sign Text (Transcribed)</span>
+              <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>text_snippet</span>
+              <span className="text-label-lg font-semibold text-on-surface">Sign Text (Transcribed)</span>
             </div>
             <span className="material-symbols-outlined text-on-surface-variant transition-transform group-open:rotate-180">expand_more</span>
           </summary>
-          <div className="px-md pb-md">
-            <p className="text-label-sm text-on-surface-variant bg-surface-container-low p-md rounded-lg font-mono whitespace-pre-wrap">
+          <div className="px-lg pb-lg border-t border-outline-variant">
+            <p className="text-label-sm text-on-surface-variant bg-surface-container p-md rounded-lg font-mono whitespace-pre-wrap">
               {analysis.rawSignText}
             </p>
           </div>
         </details>
       )}
 
-      {/* Action row */}
-      <div className="flex gap-md">
+      {/* Action Buttons */}
+      <div className="flex gap-md fixed bottom-24 left-0 right-0 max-w-[600px] mx-auto px-margin-mobile">
         <button
           onClick={onRescan}
-          className="flex-1 border border-outline-variant bg-white py-4 rounded-xl flex items-center justify-center gap-sm text-on-surface text-label-lg font-semibold hover:bg-surface-container-low active:scale-[0.98] transition-all"
+          className="flex-1 border border-outline-variant bg-surface-container-lowest py-3 rounded-lg flex items-center justify-center gap-xs text-on-surface text-label-lg font-semibold hover:bg-surface-container-low active:scale-95 transition-all shadow-sm"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>photo_camera</span>
-          Scan Again
+          <span className="material-symbols-outlined">photo_camera</span>
+          <span className="hidden sm:inline">Scan Again</span>
         </button>
 
         {analysis.canPark && (
           <button
             onClick={handleStartSession}
             disabled={loading}
-            className="flex-[2] bg-primary py-4 rounded-xl flex items-center justify-center gap-sm text-on-primary text-headline-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg disabled:opacity-70"
+            className="flex-1 bg-primary py-3 rounded-lg flex items-center justify-center gap-xs text-on-primary text-label-lg font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-70"
           >
             <span className="material-symbols-outlined">timer</span>
-            {loading ? 'Starting...' : 'Start Session'}
+            <span className="hidden sm:inline">{loading ? 'Starting...' : 'Start Session'}</span>
           </button>
         )}
       </div>

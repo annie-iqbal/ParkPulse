@@ -4,9 +4,10 @@ import { BottomNav } from './components/BottomNav';
 import { ScanScreen } from './screens/ScanScreen';
 import { AnalysisResult } from './screens/AnalysisResult';
 import { ActiveSession } from './screens/ActiveSession';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { ParkingAnalysis } from './types';
 
-type Tab = 'scan' | 'activity';
+type Tab = 'scan' | 'activity' | 'settings';
 
 type Screen =
   | { name: 'scan' }
@@ -42,6 +43,8 @@ export default function App() {
       } else {
         setScreen({ name: 'scan' });
       }
+    } else if (tab === 'settings') {
+      // stay on current screen, just show settings tab as active
     }
   }
 
@@ -55,23 +58,31 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-surface font-sans">
       <TopAppBar onHelpClick={() => setShowHelp(true)} />
 
-      {screen.name === 'scan' && (
-        <ScanScreen onAnalysisComplete={handleAnalysisComplete} />
+      {activeTab !== 'settings' && (
+        <>
+          {screen.name === 'scan' && (
+            <ScanScreen onAnalysisComplete={handleAnalysisComplete} />
+          )}
+
+          {screen.name === 'analysis' && (
+            <AnalysisResult
+              analysis={screen.analysis}
+              onSessionStart={handleSessionStart}
+              onRescan={() => {
+                setScreen({ name: 'scan' });
+                setActiveTab('scan');
+              }}
+            />
+          )}
+
+          {screen.name === 'active-session' && (
+            <ActiveSession sessionId={screen.sessionId} onStopSession={handleStopSession} />
+          )}
+        </>
       )}
 
-      {screen.name === 'analysis' && (
-        <AnalysisResult
-          analysis={screen.analysis}
-          onSessionStart={handleSessionStart}
-          onRescan={() => {
-            setScreen({ name: 'scan' });
-            setActiveTab('scan');
-          }}
-        />
-      )}
-
-      {screen.name === 'active-session' && (
-        <ActiveSession sessionId={screen.sessionId} onStopSession={handleStopSession} />
+      {activeTab === 'settings' && (
+        <SettingsScreen showHelp={() => setShowHelp(true)} />
       )}
 
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
