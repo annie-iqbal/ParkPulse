@@ -1,4 +1,4 @@
-type Tab = 'scan' | 'activity';
+type Tab = 'home' | 'scan' | 'activity';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -9,8 +9,15 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] flex justify-around items-center py-sm px-md pb-safe bg-surface rounded-t-xl shadow-[0_-2px_10px_rgba(100,116,139,0.12)] z-50">
       <NavItem
+        icon="home"
+        label="Home"
+        active={activeTab === 'home'}
+        onClick={() => onTabChange('home')}
+        filled
+      />
+      <NavItem
         icon="photo_camera"
-        label="Scan"
+        label="Park"
         active={activeTab === 'scan'}
         onClick={() => onTabChange('scan')}
       />

@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import { TopAppBar } from './components/TopAppBar';
 import { BottomNav } from './components/BottomNav';
+import { Dashboard } from './screens/Dashboard';
+import { MarkSpotScreen } from './screens/MarkSpotScreen';
 import { ScanScreen } from './screens/ScanScreen';
 import { AnalysisResult } from './screens/AnalysisResult';
 import { ActiveSession } from './screens/ActiveSession';
+import { ReminderSettingsScreen } from './screens/ReminderSettings';
 import { ParkingAnalysis } from './types';
 
-type Tab = 'scan' | 'activity';
+type Tab = 'home' | 'scan' | 'activity';
 
 type Screen =
+  | { name: 'dashboard' }
+  | { name: 'mark-spot' }
   | { name: 'scan' }
+  | { name: 'reminder-settings' }
   | { name: 'analysis'; analysis: ParkingAnalysis }
   | { name: 'active-session'; sessionId: string };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('scan');
-  const [screen, setScreen] = useState<Screen>({ name: 'scan' });
+  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [screen, setScreen] = useState<Screen>({ name: 'dashboard' });
   const [lastSessionId, setLastSessionId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -32,28 +38,103 @@ export default function App() {
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
-    if (tab === 'scan') {
-      setScreen({ name: 'scan' });
+    if (tab === 'home') {
+      setScreen({ name: 'dashboard' });
+    } else if (tab === 'scan') {
+      setScreen({ name: 'mark-spot' });
     } else if (tab === 'activity') {
       if (lastSessionId) {
         setScreen({ name: 'active-session', sessionId: lastSessionId });
       } else if (screen.name === 'analysis') {
         // stay on analysis
       } else {
-        setScreen({ name: 'scan' });
+        setScreen({ name: 'dashboard' });
       }
     }
   }
 
   function handleStopSession() {
     setLastSessionId(null);
-    setScreen({ name: 'scan' });
-    setActiveTab('scan');
+    setScreen({ name: 'dashboard' });
+    setActiveTab('home');
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
-      <TopAppBar onHelpClick={() => setShowHelp(true)} />
+      {screen.name !== 'dashboard' && screen.name !== 'mark-spot' && screen.name !== 'reminder-settings' && <TopAppBar onHelpClick={() => setShowHelp(true)} />}
+
+      {screen.name === 'dashboard' && (
+        <Dashboard
+          onParkMyCar={() => {
+            setScreen({ name: 'mark-spot' });
+            setActiveTab('scan');
+          }}
+          onFindParking={() => {
+            setScreen({ name: 'mark-spot' });
+            setActiveTab('scan');
+          }}
+          onViewAllHistory={() => {
+            setActiveTab('activity');
+            if (lastSessionId) {
+              setScreen({ name: 'active-session', sessionId: lastSessionId });
+            }
+          }}
+          onSettingsClick={() => {
+            setScreen({ name: 'reminder-settings' });
+            setActiveTab('home');
+          }}
+        />
+      )}
+
+      {screen.name === 'mark-spot' && (
+        <MarkSpotScreen
+          onConfirm={(sessionId: string) => {
+            setLastSessionId(sessionId);
+            setScreen({ name: 'dashboard' });
+            setActiveTab('home');
+          }}
+          onHomeClick={() => {
+            setScreen({ name: 'dashboard' });
+            setActiveTab('home');
+          }}
+          onParkClick={() => {
+            setScreen({ name: 'mark-spot' });
+            setActiveTab('scan');
+          }}
+          onCheckClick={() => {
+            setScreen({ name: 'scan' });
+            setActiveTab('scan');
+          }}
+          onSettingsClick={() => {
+            setScreen({ name: 'reminder-settings' });
+            setActiveTab('home');
+          }}
+        />
+      )}
+
+      {screen.name === 'reminder-settings' && (
+        <ReminderSettingsScreen
+          onBack={() => {
+            setScreen({ name: 'dashboard' });
+            setActiveTab('home');
+          }}
+          onHomeClick={() => {
+            setScreen({ name: 'dashboard' });
+            setActiveTab('home');
+          }}
+          onParkClick={() => {
+            setScreen({ name: 'mark-spot' });
+            setActiveTab('scan');
+          }}
+          onCheckClick={() => {
+            setScreen({ name: 'scan' });
+            setActiveTab('scan');
+          }}
+          onSettingsClick={() => {
+            setScreen({ name: 'reminder-settings' });
+          }}
+        />
+      )}
 
       {screen.name === 'scan' && (
         <ScanScreen onAnalysisComplete={handleAnalysisComplete} />
@@ -74,7 +155,9 @@ export default function App() {
         <ActiveSession sessionId={screen.sessionId} onStopSession={handleStopSession} />
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      {screen.name !== 'dashboard' && screen.name !== 'mark-spot' && screen.name !== 'reminder-settings' && (
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      )}
 
       {showHelp && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">​​
