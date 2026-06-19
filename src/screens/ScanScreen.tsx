@@ -11,39 +11,6 @@ type ScanState = 'idle' | 'captured' | 'locating' | 'analyzing' | 'error';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const DEMO_ANALYSIS: ParkingAnalysis = {
-  canPark: true,
-  verdict: 'YES, YOU CAN PARK',
-  description: 'Signs at this location currently permit parking for your vehicle type.',
-  maxDuration: '2 Hours',
-  until: '4:00 PM',
-  contextCards: [
-    {
-      icon: 'school',
-      iconBg: '#fed01b',
-      iconColor: '#6f5900',
-      title: 'School Zone Active',
-      description: 'Currently a school day. Strict 2-minute pickup/drop-off rules will apply from 3:00 PM.',
-      colSpan: 2,
-    },
-    {
-      icon: 'calendar_today',
-      iconBg: '#e5eeff',
-      iconColor: '#004ac6',
-      title: 'No Public Holiday',
-      description: 'Normal weekday rules apply. Standard time restrictions are in effect.',
-    },
-  ],
-  regulatoryBreakdown: [
-    { status: 'ok', title: 'Clearway Status', detail: 'No clearway active until 4:30 PM.' },
-    { status: 'ok', title: 'Permit Zones', detail: 'Not in a Residential Permit Area.' },
-    { status: 'info', title: 'Parking Fee', detail: '$5.50/hour via PayStay App (Zone 30021).' },
-  ],
-  location: 'Bourke St, Melbourne',
-  analysisTime: 'Demo Mode',
-  rawSignText: '2P\n7am–6pm Mon–Sat\nExcept Public Holidays',
-};
-
 async function extractEdgeFunctionError(error: unknown): Promise<string> {
   if (!error) return 'Unknown error';
   const err = error as { message?: string; context?: Response };
@@ -185,158 +152,149 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
     }
   }
 
-  function handleDemo() {
-    onAnalysisComplete(DEMO_ANALYSIS);
-  }
-
   const isProcessing = scanState === 'locating' || scanState === 'analyzing';
 
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg flex flex-col gap-lg">
-
-      {/* Hero instruction card */}
-      <div className="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
-        <div className="bg-primary px-lg py-md">
-          <h2 className="text-headline-sm font-semibold text-white">Scan Parking Sign</h2>
-          <p className="text-white/80 text-label-lg mt-xs">
-            Point your camera at any parking sign for an instant AI verdict
-          </p>
-        </div>
-
-        {/* Camera / Preview area */}
-        <div className="relative">
-          {capturedImage ? (
-            <div className="relative">
-              <img
-                src={capturedImage}
-                alt="Captured parking sign"
-                className="w-full h-72 object-cover"
-              />
-              {isProcessing && (
-                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-md">
-                  <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                  <p className="text-white font-label-lg">{statusMessage}</p>
-                </div>
-              )}
-              {(scanState === 'captured' || scanState === 'error') && (
-                <button
-                  onClick={handleRetake}
-                  className="absolute top-md right-md bg-black/50 text-white rounded-full px-md py-xs text-label-lg font-medium flex items-center gap-xs hover:bg-black/70 transition-colors"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>refresh</span>
-                  Retake
-                </button>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full h-72 flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant rounded-b-xl"
-            >
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: '40px' }}>
-                  photo_camera
-                </span>
-              </div>
-              <div className="text-center">
-                <p className="text-headline-sm font-semibold text-on-surface">Take a Photo</p>
-                <p className="text-on-surface-variant text-label-lg mt-xs">Tap to open your camera</p>
-              </div>
-            </button>
-          )}
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
-
-      {/* Error state */}
-      {scanState === 'error' && (
-        <div className="bg-error-container border border-error/30 rounded-xl p-md flex items-start gap-md">
-          <span className="material-symbols-outlined text-on-error-container mt-0.5 flex-shrink-0">error</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-label-lg font-semibold text-on-error-container">{errorMessage}</p>
-            {errorDetail && (
-              <p className="text-label-sm text-on-error-container/80 mt-xs whitespace-pre-line">{errorDetail}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Analyze / retry button */}
-      {(scanState === 'captured' || scanState === 'error') && (
-        <button
-          onClick={handleAnalyze}
-          disabled={isProcessing}
-          className="w-full bg-primary py-4 rounded-xl flex items-center justify-center gap-md text-on-primary text-headline-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg disabled:opacity-70"
-        >
-          <span className="material-symbols-outlined">search</span>
-          {scanState === 'error' ? 'Try Again' : 'Analyze Sign'}
-        </button>
-      )}
-
-      {/* Tips + Demo mode */}
+    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg flex flex-col">
+      {/* Landing Screen - Idle State */}
       {scanState === 'idle' && (
         <>
-          <div className="bg-surface-container-low rounded-xl p-lg border border-outline-variant">
-            <h3 className="text-label-lg font-semibold mb-md text-on-surface">Tips for best results</h3>
-            <ul className="space-y-sm">
-              {[
-                { icon: 'wb_sunny', text: 'Ensure good lighting on the sign' },
-                { icon: 'crop_free', text: 'Capture the entire sign in frame' },
-                { icon: 'photo_size_select_large', text: 'Get close enough to read the text' },
-                { icon: 'layers', text: 'Include all stacked signs if present' },
-              ].map((tip) => (
-                <li key={tip.icon} className="flex items-center gap-md text-on-surface-variant">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>
-                    {tip.icon}
-                  </span>
-                  <span className="text-label-lg">{tip.text}</span>
-                </li>
-              ))}
-            </ul>
+          {/* Hero Card */}
+          <div className="bg-primary-fixed-dim rounded-xl p-xl mb-lg border border-primary-container">
+            <h2 className="text-display-status-mobile font-extrabold text-primary mb-md">Can I Park Here?</h2>
+            <p className="text-body-lg text-on-surface mb-xl">
+              Upload or snap a photo of the nearby parking sign. Our AI engine analyzes local regulations in real-time for instant clarity.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="space-y-md">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full bg-primary text-on-primary py-4 rounded-lg flex items-center justify-center gap-md text-headline-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>photo_camera</span>
+                Scan Parking Sign
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full bg-surface-container-lowest text-on-surface py-4 rounded-lg flex items-center justify-center gap-md text-headline-sm font-semibold hover:bg-surface-container-low active:scale-95 transition-all border border-outline-variant"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>upload_file</span>
+                Upload Image
+              </button>
+            </div>
           </div>
 
-          {/* Demo mode */}
-          <div className="bg-surface-container-low rounded-xl p-md border border-outline-variant flex items-center justify-between gap-md">
-            <div className="flex items-center gap-md">
-              <div className="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-on-secondary-container" style={{ fontSize: '20px' }}>
-                  science
-                </span>
+          {/* Current Status Card */}
+          <div className="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm">
+            <p className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold mb-md">Current Status</p>
+            <p className="text-display-status-mobile font-extrabold text-primary mb-xs">{timeStr}</p>
+            <p className="text-label-lg text-on-surface-variant mb-lg">{dateStr}</p>
+            <div className="flex items-center gap-md pt-lg border-t border-outline-variant">
+              <div className="w-10 h-10 rounded-lg bg-primary-fixed-dim flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary">location_on</span>
               </div>
-              <div>
-                <p className="text-label-lg font-semibold text-on-surface">Demo Mode</p>
-                <p className="text-label-sm text-on-surface-variant">Preview the full app flow</p>
-              </div>
+              <p className="text-label-lg text-on-surface font-medium">Downtown District 4</p>
             </div>
-            <button
-              onClick={handleDemo}
-              className="bg-secondary-container text-on-secondary-container px-md py-sm rounded-lg text-label-lg font-semibold hover:opacity-80 active:scale-95 transition-all flex-shrink-0"
-            >
-              Try Demo
-            </button>
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </>
       )}
 
-      {/* Demo mode also available after error */}
-      {scanState === 'error' && (
-        <div className="flex items-center justify-center gap-sm">
-          <span className="text-on-surface-variant text-label-sm">No API key yet?</span>
-          <button
-            onClick={handleDemo}
-            className="text-primary text-label-lg font-semibold hover:underline"
-          >
-            Try Demo Mode
-          </button>
-        </div>
+      {/* Capture Preview & Analysis Flow */}
+      {scanState !== 'idle' && (
+        <>
+          {/* Camera / Preview area */}
+          <div className="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden mb-lg">
+            <div className="relative">
+              {capturedImage ? (
+                <div className="relative">
+                  <img
+                    src={capturedImage}
+                    alt="Captured parking sign"
+                    className="w-full h-72 object-cover"
+                  />
+                  {isProcessing && (
+                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-md">
+                      <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                      <p className="text-white font-label-lg">{statusMessage}</p>
+                    </div>
+                  )}
+                  {(scanState === 'captured' || scanState === 'error') && (
+                    <button
+                      onClick={handleRetake}
+                      className="absolute top-md right-md bg-black/50 text-white rounded-full px-md py-xs text-label-lg font-medium flex items-center gap-xs hover:bg-black/70 transition-colors"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>refresh</span>
+                      Retake
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-72 flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant"
+                >
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '40px' }}>
+                      photo_camera
+                    </span>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-headline-sm font-semibold text-on-surface">Take a Photo</p>
+                    <p className="text-on-surface-variant text-label-lg mt-xs">Tap to open your camera</p>
+                  </div>
+                </button>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {/* Error state */}
+          {scanState === 'error' && (
+            <div className="bg-error-container border border-error/30 rounded-xl p-md flex items-start gap-md mb-lg">
+              <span className="material-symbols-outlined text-on-error-container mt-0.5 flex-shrink-0">error</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-label-lg font-semibold text-on-error-container">{errorMessage}</p>
+                {errorDetail && (
+                  <p className="text-label-sm text-on-error-container/80 mt-xs whitespace-pre-line">{errorDetail}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Analyze / retry button */}
+          {(scanState === 'captured' || scanState === 'error') && (
+            <button
+              onClick={handleAnalyze}
+              disabled={isProcessing}
+              className="w-full bg-primary py-4 rounded-lg flex items-center justify-center gap-md text-on-primary text-headline-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg disabled:opacity-70"
+            >
+              <span className="material-symbols-outlined">search</span>
+              {scanState === 'error' ? 'Try Again' : 'Analyze Sign'}
+            </button>
+          )}
+        </>
       )}
     </main>
   );

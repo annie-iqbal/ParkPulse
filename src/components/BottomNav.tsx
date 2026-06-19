@@ -9,10 +9,11 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] flex justify-around items-center py-sm px-md pb-safe bg-surface rounded-t-xl shadow-[0_-2px_10px_rgba(100,116,139,0.12)] z-50">
       <NavItem
-        icon="photo_camera"
-        label="Scan"
+        icon="search"
+        label="Check"
         active={activeTab === 'scan'}
         onClick={() => onTabChange('scan')}
+        filled={activeTab === 'scan'}
       />
       <NavItem
         icon="history"
