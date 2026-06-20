@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getReminderSettings, saveReminderSettings } from '../lib/reminderSettings';
 
 interface ParkingSession {
   id: string;
@@ -15,9 +16,12 @@ interface SettingsScreenProps {
   onRestoreSession?: (sessionId: string) => void;
 }
 
+const TIMING_OPTIONS = [5, 10, 15, 20];
+
 export function SettingsScreen({ showHelp, onRestoreSession }: SettingsScreenProps) {
   const [appVersion] = useState('1.0.0');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [reminderLeadMinutes, setReminderLeadMinutes] = useState(5);
   const [locationTracking, setLocationTracking] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [sessions, setSessions] = useState<ParkingSession[]>([]);
@@ -32,6 +36,11 @@ export function SettingsScreen({ showHelp, onRestoreSession }: SettingsScreenPro
       setLocationTracking(settings.locationTracking ?? true);
       setDarkMode(settings.darkMode ?? false);
     }
+
+    // Load reminder settings
+    const reminderSettings = getReminderSettings();
+    setNotificationsEnabled(reminderSettings.enabled);
+    setReminderLeadMinutes(reminderSettings.leadMinutes);
   }, []);
 
   useEffect(() => {
@@ -58,7 +67,7 @@ export function SettingsScreen({ showHelp, onRestoreSession }: SettingsScreenPro
     fetchSessions();
   }, []);
 
-  const saveSettings = (key: string, value: boolean) => {
+  const saveSettings = (key: string, value: boolean | number) => {
     const settings = {
       notificationsEnabled,
       locationTracking,
@@ -66,12 +75,25 @@ export function SettingsScreen({ showHelp, onRestoreSession }: SettingsScreenPro
       [key]: value,
     };
     localStorage.setItem('parkwise_settings', JSON.stringify(settings));
+
+    // Also save reminder settings
+    if (key === 'notificationsEnabled' || key === 'reminderLeadMinutes') {
+      saveReminderSettings({
+        enabled: key === 'notificationsEnabled' ? (value as boolean) : notificationsEnabled,
+        leadMinutes: key === 'reminderLeadMinutes' ? (value as number) : reminderLeadMinutes,
+      });
+    }
   };
 
   const handleNotificationsChange = () => {
     const newValue = !notificationsEnabled;
     setNotificationsEnabled(newValue);
     saveSettings('notificationsEnabled', newValue);
+  };
+
+  const handleReminderTimingChange = (minutes: number) => {
+    setReminderLeadMinutes(minutes);
+    saveSettings('reminderLeadMinutes', minutes);
   };
 
   const handleLocationChange = () => {
@@ -121,6 +143,28 @@ export function SettingsScreen({ showHelp, onRestoreSession }: SettingsScreenPro
                 />
               </label>
             </div>
+
+            {/* Reminder Timing Options */}
+            {notificationsEnabled && (
+              <div className="bg-surface-container p-lg rounded-lg border border-outline-variant">
+                <p className="text-label-lg font-semibold text-on-surface mb-md">Remind me</p>
+                <div className="grid grid-cols-4 gap-sm">
+                  {TIMING_OPTIONS.map((minutes) => (
+                    <button
+                      key={minutes}
+                      onClick={() => handleReminderTimingChange(minutes)}
+                      className={`py-md px-sm rounded-lg border-2 text-label-sm font-semibold transition-all ${
+                        reminderLeadMinutes === minutes
+                          ? 'border-primary bg-primary-fixed-dim text-primary'
+                          : 'border-outline bg-surface hover:border-primary text-on-surface'
+                      }`}
+                    >
+                      {minutes}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

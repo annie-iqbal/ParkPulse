@@ -1,4 +1,4 @@
-type Tab = 'check' | 'settings';
+type Tab = 'home' | 'park' | 'check' | 'activity' | 'settings';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -9,18 +9,34 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] flex justify-around items-center py-sm px-md pb-safe bg-surface rounded-t-xl shadow-[0_-2px_10px_rgba(100,116,139,0.12)] z-50">
       <NavItem
+        icon="home"
+        label="Home"
+        active={activeTab === 'home'}
+        onClick={() => onTabChange('home')}
+      />
+      <NavItem
+        icon="directions_car"
+        label="Park"
+        active={activeTab === 'park'}
+        onClick={() => onTabChange('park')}
+      />
+      <NavItem
         icon="search"
         label="Check"
         active={activeTab === 'check'}
         onClick={() => onTabChange('check')}
-        filled={activeTab === 'check'}
+      />
+      <NavItem
+        icon="history"
+        label="Activity"
+        active={activeTab === 'activity'}
+        onClick={() => onTabChange('activity')}
       />
       <NavItem
         icon="settings"
         label="Settings"
         active={activeTab === 'settings'}
         onClick={() => onTabChange('settings')}
-        filled={activeTab === 'settings'}
       />
     </nav>
   );
@@ -31,10 +47,9 @@ interface NavItemProps {
   label: string;
   active: boolean;
   onClick: () => void;
-  filled?: boolean;
 }
 
-function NavItem({ icon, label, active, onClick, filled }: NavItemProps) {
+function NavItem({ icon, label, active, onClick }: NavItemProps) {
   if (active) {
     return (
       <button
@@ -43,7 +58,7 @@ function NavItem({ icon, label, active, onClick, filled }: NavItemProps) {
       >
         <span
           className="material-symbols-outlined text-[22px]"
-          style={filled ? { fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" } : undefined}
+          style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
         >
           {icon}
         </span>

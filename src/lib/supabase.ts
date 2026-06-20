@@ -16,4 +16,8 @@ export interface ParkingSession {
   created_at: string;
   lat?: number;
   lng?: number;
+  payment_due?: number;
+  spot_note?: string;
+  ended_at?: string | null;
+  image_url?: string | null;
 }
