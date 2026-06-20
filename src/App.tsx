@@ -147,6 +147,7 @@ export default function App() {
             }
           }}
           onSettingsClick={() => {
+            setScreen({ name: 'settings' });
             setActiveTab('settings');
           }}
         />
@@ -172,6 +173,7 @@ export default function App() {
             setActiveTab('check');
           }}
           onSettingsClick={() => {
+            setScreen({ name: 'settings' });
             setActiveTab('settings');
           }}
         />
