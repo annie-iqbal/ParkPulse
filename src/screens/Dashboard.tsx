@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
   CarFront,
@@ -22,6 +22,8 @@ interface DashboardProps {
   onViewAllHistory?: () => void;
   onFindParking?: () => void;
   onSettingsClick?: () => void;
+  isVisible?: boolean;
+  activeTab?: 'home' | 'park' | 'check' | 'settings';
 }
 
 function formatRemaining(ms: number): string {
@@ -114,12 +116,14 @@ function cacheLivePosition(position: LivePosition) {
 }
 
 function HistoryThumbnail({ session }: { session: ParkingSession }) {
+  const isDark = document.documentElement.classList.contains('dark');
+  
   if (session.image_url) {
     return <img src={toPublicImageUrl(session.image_url)} alt={session.location} className="w-[68px] h-[68px] rounded-[8px] object-cover" />;
   }
 
   return (
-    <div className="relative w-[68px] h-[68px] rounded-[8px] overflow-hidden bg-[#DDE8EA] border border-[#CDBEB2]">
+    <div className={`relative w-[68px] h-[68px] rounded-[8px] overflow-hidden ${isDark ? 'bg-[#333] border-[#555]' : 'bg-[#DDE8EA] border-[#CDBEB2]'} border`}>
       <div
         className="absolute inset-0 opacity-80"
         style={{
@@ -129,7 +133,7 @@ function HistoryThumbnail({ session }: { session: ParkingSession }) {
         }}
       />
       {session.lat && session.lng && (
-        <div className="absolute left-1 top-1 rounded bg-white/85 px-1 py-0.5 text-[8px] font-semibold text-[#5F514A]">
+        <div className={`absolute left-1 top-1 rounded px-1 py-0.5 text-[8px] font-semibold ${isDark ? 'bg-[#333]/85 text-[#ddd]' : 'bg-white/85 text-[#5F514A]'}`}>
           {session.lat.toFixed(2)}, {session.lng.toFixed(2)}
         </div>
       )}
@@ -138,7 +142,7 @@ function HistoryThumbnail({ session }: { session: ParkingSession }) {
   );
 }
 
-export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
+export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, activeTab = 'home' }: DashboardProps) {
   const [activeSession, setActiveSession] = useState<ParkingSession | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
   const [historyItems, setHistoryItems] = useState<ParkingSession[]>([]);
@@ -154,52 +158,69 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
   const [livePosition, setLivePosition] = useState<LivePosition | null>(null);
   const [navigationStatus, setNavigationStatus] = useState('Waiting for live location...');
   const [fullImageUrl, setFullImageUrl] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
   const lastRoutePositionRef = useRef<LivePosition | null>(null);
   const lastRouteUpdateRef = useRef(0);
   const navigationHistoryPushedRef = useRef(false);
 
+  // Load dark mode setting on mount
   useEffect(() => {
-    let mounted = true;
-
-    async function loadSessions() {
-      try {
-        // Load active session
-        const { data: activeSessions } = await supabase
-          .from('parking_sessions')
-          .select('*')
-          .eq('status', 'active')
-          .order('started_at', { ascending: false })
-          .limit(1);
-
-        if (mounted && activeSessions && activeSessions.length > 0) {
-          setActiveSession(activeSessions[0]);
-          setRemainingMs(
-            Math.max(0, new Date(activeSessions[0].expires_at).getTime() - Date.now())
-          );
-        }
-
-        // Load history (cancelled or expired sessions)
-        const { data: history } = await supabase
-          .from('parking_sessions')
-          .select('*')
-          .in('status', ['cancelled', 'expired'])
-          .order('ended_at', { ascending: false })
-          .range(0, HISTORY_PAGE_SIZE - 1);
-
-        if (mounted && history) {
-          setHistoryItems(history);
-          setHasMoreHistory(history.length === HISTORY_PAGE_SIZE);
-        }
-      } catch (error) {
-        console.error('Error loading sessions:', error);
-      }
+    const saved = localStorage.getItem('parkwise_settings');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      setDarkMode(settings.darkMode ?? false);
     }
 
-    loadSessions();
-    return () => {
-      mounted = false;
+    // Listen for dark mode changes
+    const handleDarkModeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setDarkMode(customEvent.detail);
     };
+
+    window.addEventListener('darkModeToggled', handleDarkModeChange);
+    return () => window.removeEventListener('darkModeToggled', handleDarkModeChange);
   }, []);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      // Load active session
+      const { data: activeSessions } = await supabase
+        .from('parking_sessions')
+        .select('*')
+        .eq('status', 'active')
+        .order('started_at', { ascending: false })
+        .limit(1);
+
+      if (activeSessions && activeSessions.length > 0) {
+        setActiveSession(activeSessions[0]);
+        setRemainingMs(
+          Math.max(0, new Date(activeSessions[0].expires_at).getTime() - Date.now())
+        );
+      } else {
+        setActiveSession(null);
+        setRemainingMs(0);
+      }
+
+      // Load history (cancelled or expired sessions)
+      const { data: history } = await supabase
+        .from('parking_sessions')
+        .select('*')
+        .in('status', ['cancelled', 'expired'])
+        .order('ended_at', { ascending: false })
+        .range(0, HISTORY_PAGE_SIZE - 1);
+
+      if (history) {
+        setHistoryItems(history);
+        setHasMoreHistory(history.length === HISTORY_PAGE_SIZE);
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [isVisible, activeTab, loadSessions]);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -297,19 +318,18 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
   async function handleReachedMyCar() {
     if (!activeSession) return;
     const endedAt = new Date().toISOString();
-    const { data: endedSession } = await supabase
+    const { error: updateError } = await supabase
       .from('parking_sessions')
       .update({ status: 'cancelled', ended_at: endedAt })
-      .eq('id', activeSession.id)
-      .select('*')
-      .single();
+      .eq('id', activeSession.id);
 
-    setActiveSession(null);
-    setRemainingMs(0);
-    setHistoryItems((prev) => {
-      const completedSession = endedSession ?? { ...activeSession, status: 'cancelled', ended_at: endedAt };
-      return [completedSession, ...prev.filter((item) => item.id !== activeSession.id)];
-    });
+    if (updateError) {
+      console.error('Error ending session:', updateError);
+      return;
+    }
+
+    // Reload sessions to ensure state is fresh
+    await loadSessions();
   }
 
   function closeNavigationPopup(syncHistory = true) {
@@ -451,10 +471,10 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
   const displayedHistoryItems = showAllHistory ? historyItems : historyItems.slice(0, 3);
 
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-3 sm:px-4 pt-3 pb-20 bg-[#EEE8E2]">
-      <div className="mx-auto w-full max-w-[540px] rounded-[20px] border border-[#D6CBC2] bg-[#F3EEEA] shadow-[0_4px_22px_rgba(28,25,23,0.12)] overflow-hidden">
-        <header className="h-[64px] px-4 sm:px-5 border-b border-[#D7CCC2] flex items-center justify-between bg-[#F4F0EC]">
-          <div className="flex items-center gap-2 text-[#D97706]">
+    <main className={`flex-grow w-full max-w-[600px] mx-auto px-3 sm:px-4 pt-3 pb-20 ${darkMode ? 'bg-[#1a1a1a]' : 'bg-[#EEE8E2]'}`}>
+      <div className={`mx-auto w-full max-w-[540px] rounded-[20px] border ${darkMode ? 'border-[#444] bg-[#242424]' : 'border-[#D6CBC2] bg-[#F3EEEA]'} shadow-[0_4px_22px_rgba(28,25,23,0.12)] overflow-hidden`}>
+        <header className={`h-[64px] px-4 sm:px-5 border-b ${darkMode ? 'border-[#444] bg-[#1f1f1f]' : 'border-[#D7CCC2] bg-[#F4F0EC]'} flex items-center justify-between`}>
+          <div className={`flex items-center gap-2 ${darkMode ? 'text-[#E8A600]' : 'text-[#D97706]'}`}>
             <Menu size={22} strokeWidth={2.2} />
             <h1 className="text-[24px] leading-none font-bold tracking-tight">
               <span>P</span>
@@ -465,9 +485,9 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="h-8 px-3 rounded-full border border-[#D4C8BE] bg-[#EEE8E1] flex items-center gap-2">
+            <div className={`h-8 px-3 rounded-full border ${darkMode ? 'border-[#555] bg-[#333]' : 'border-[#D4C8BE] bg-[#EEE8E1]'} flex items-center gap-2`}>
               <span className="w-2 h-2 rounded-full bg-[#4CAF50]" />
-              <span className="text-[12px] tracking-[0.22em] text-[#6B615B]">ONLINE</span>
+              <span className={`text-[12px] tracking-[0.22em] ${darkMode ? 'text-[#999]' : 'text-[#6B615B]'}`}>ONLINE</span>
             </div>
             <img src={profileAvatar} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[#D97706]/45" />
           </div>
@@ -476,13 +496,13 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
         <section className="p-5">
           {!isParked && (
             <div className="rounded-[12px] bg-gradient-to-br from-[#E88816] via-[#C66709] to-[#A94E09] px-5 sm:px-6 pt-9 pb-8 text-center text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_16px_24px_rgba(69,26,3,0.16)]">
-              <div className="mx-auto w-24 h-24 rounded-xl bg-[#E4A46B]/65 flex items-center justify-center mb-7">
-                <CarFront size={42} strokeWidth={2.1} />
+              <div className={`mx-auto w-24 h-24 rounded-xl ${darkMode ? 'bg-[#5c3d1f]' : 'bg-[#E4A46B]/65'} flex items-center justify-center mb-7`}>
+                <CarFront size={42} strokeWidth={2.1} className={darkMode ? 'text-[#ffb84d]' : 'text-white'} />
               </div>
 
-              <p className="text-[12px] leading-none tracking-[0.4em] font-medium text-white/90">CURRENT STATUS</p>
-              <h2 className="mt-4 text-[56px] leading-[0.96] font-extrabold tracking-[-0.02em]">Not Parked</h2>
-              <p className="mt-6 text-[20px] leading-[1.35] text-white/92 font-normal max-w-[420px] mx-auto">
+              <p className={`text-[12px] leading-none tracking-[0.4em] font-medium ${darkMode ? 'text-[#888]' : 'text-white/90'}`}>CURRENT STATUS</p>
+              <h2 className={`mt-4 text-[56px] leading-[0.96] font-extrabold tracking-[-0.02em] ${darkMode ? 'text-[#e0e0e0]' : 'text-white'}`}>Not Parked</h2>
+              <p className={`mt-6 text-[20px] leading-[1.35] ${darkMode ? 'text-[#aaa]' : 'text-white/92'} font-normal max-w-[420px] mx-auto`}>
                 Find the best available parking
                 <br />
                 spot near your destination.
@@ -490,7 +510,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
 
               <button
                 onClick={onParkMyCar}
-                className="mt-8 w-full h-[72px] rounded-[10px] bg-[#F5F5F5] border-[4px] border-[#D7D7D7] text-[#D97706] flex items-center justify-center gap-3.5 font-semibold tracking-[0.12em] text-[14px] active:scale-[0.99] transition-transform"
+                className={`mt-8 w-full h-[72px] rounded-[10px] ${darkMode ? 'bg-[#333] border-[#444]' : 'bg-[#F5F5F5] border-[#D7D7D7]'} ${darkMode ? 'text-[#ff9800]' : 'text-[#D97706]'} border-[4px] flex items-center justify-center gap-3.5 font-semibold tracking-[0.12em] text-[14px] active:scale-[0.99] transition-transform`}
               >
                 <span className="text-[36px] font-bold leading-none">P</span>
                 <span className="text-[28px] leading-none">PARK MY CAR</span>
@@ -516,15 +536,15 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
               </div>
               )}
 
-              <div className="rounded-[12px] border border-[#CDBEB2] bg-[#2F404C] p-3">
-                <div className="rounded-[10px] bg-[#F6F2EE] px-3 py-2.5 mb-3 flex items-center justify-between">
+              <div className={`rounded-[12px] border ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBEB2] bg-[#2F404C]'} p-3`}>
+                <div className={`rounded-[10px] ${darkMode ? 'bg-[#333] text-[#ddd]' : 'bg-[#F6F2EE]'} px-3 py-2.5 mb-3 flex items-center justify-between`}>
                   <div className="flex items-center gap-2">
-                    <span className="w-9 h-9 rounded-[8px] bg-[#D97706] text-white grid place-items-center">
+                    <span className={`w-9 h-9 rounded-[8px] ${darkMode ? 'bg-[#ff9800]' : 'bg-[#D97706]'} text-white grid place-items-center`}>
                       <Navigation size={16} />
                     </span>
                     <div>
-                      <p className="text-[11px] tracking-[0.08em] font-semibold text-[#B66206]">ESTIMATED WALK</p>
-                      <p className="text-[16px] leading-none font-semibold text-[#251C18]">{estimatedWalkText}</p>
+                      <p className={`text-[11px] tracking-[0.08em] font-semibold ${darkMode ? 'text-[#ffb84d]' : 'text-[#B66206]'}`}>ESTIMATED WALK</p>
+                      <p className={`text-[16px] leading-none font-semibold ${darkMode ? 'text-[#ddd]' : 'text-[#251C18]'}`}>{estimatedWalkText}</p>
                     </div>
                   </div>
                   <button
@@ -532,7 +552,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
                       setShowNavigationMap(false);
                       setShowNavigationPopup(true);
                     }}
-                    className={`w-9 h-9 rounded-[8px] text-white grid place-items-center ${showNavigationMap ? 'bg-[#2F404C]' : 'bg-[#D97706]'}`}
+                    className={`w-9 h-9 rounded-[8px] text-white grid place-items-center ${showNavigationMap ? (darkMode ? 'bg-[#2a2a2a]' : 'bg-[#2F404C]') : (darkMode ? 'bg-[#ff9800]' : 'bg-[#D97706]')}`}
                     aria-label="Open full screen navigation"
                   >
                     <Navigation size={16} />
@@ -567,22 +587,22 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
                 )}
 
                 <div className="mt-3 flex justify-end">
-                  <span className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#F6F2EE] px-3 py-2 text-[13px] font-semibold text-[#2C211B]">
+                  <span className={`inline-flex items-center gap-1.5 rounded-[8px] ${darkMode ? 'bg-[#333] text-[#ddd]' : 'bg-[#F6F2EE] text-[#2C211B]'} px-3 py-2 text-[13px] font-semibold`}>
                     <Clock3 size={14} className="text-[#D97706]" /> {formatRemaining(remainingMs)} left
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-[10px] border border-[#CDBEB2] bg-[#F8F5F2] p-4">
+              <div className={`rounded-[10px] border ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBEB2] bg-[#F8F5F2]'} p-4`}>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[18px] font-semibold text-[#2A1E17]">Parking Location</h4>
-                  <span className="rounded-full bg-[#F4D5A8] px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-[#A95E05]">LEVEL 3B</span>
+                  <h4 className={`text-[18px] font-semibold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>Parking Location</h4>
+                  <span className={`rounded-full ${darkMode ? 'bg-[#664D00] text-[#ffb84d]' : 'bg-[#F4D5A8] text-[#A95E05]'} px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em]`}>LEVEL 3B</span>
                 </div>
-                <p className="text-[14px] text-[#514139] flex items-center gap-1.5"><LocateFixed size={14} className="text-[#D97706]" /> {activeSession?.location ?? 'Saved parking location'}</p>
-                <p className="mt-2 text-[13px] text-[#6B5A51] flex items-center gap-1.5">
+                <p className={`text-[14px] ${darkMode ? 'text-[#999]' : 'text-[#514139]'} flex items-center gap-1.5`}><LocateFixed size={14} className="text-[#D97706]" /> {activeSession?.location ?? 'Saved parking location'}</p>
+                <p className={`mt-2 text-[13px] ${darkMode ? 'text-[#777]' : 'text-[#6B5A51]'} flex items-center gap-1.5`}>
                   <Clock3 size={14} className="text-[#D97706]" /> Parked on {activeSession ? new Date(activeSession.started_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''}
                 </p>
-                <div className="mt-3 rounded-[8px] bg-[#E9E7EE] px-4 py-3 text-[14px] italic text-[#4E4A57] leading-[1.4]">
+                <div className={`mt-3 rounded-[8px] ${darkMode ? 'bg-[#333] text-[#aaa]' : 'bg-[#E9E7EE] text-[#4E4A57]'} px-4 py-3 text-[14px] italic leading-[1.4]`}>
                   {activeSession?.spot_note ? `"${activeSession.spot_note}"` : '"Spot details were saved when you marked your car."'}
                 </div>
               </div>
@@ -616,12 +636,12 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
           {!isParked && (
             <>
               <div className="mt-7 flex items-center justify-between">
-                <h3 className="text-[20px] leading-none font-semibold text-[#2A1E17]">Recent History</h3>
+                <h3 className={`text-[20px] leading-none font-semibold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>Recent History</h3>
                 <button
                   onClick={() => {
                     setShowAllHistory(true);
                   }}
-                  className="text-[#D97706] text-[13px] tracking-[0.06em] font-medium"
+                  className={`text-[13px] tracking-[0.06em] font-medium ${darkMode ? 'text-[#ffb84d]' : 'text-[#D97706]'}`}
                 >
                   VIEW ALL
                 </button>
@@ -632,7 +652,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
                 className={`mt-3.5 space-y-3 ${showAllHistory ? 'max-h-[520px] overflow-y-auto pr-1' : ''}`}
               >
                 {historyItems.length === 0 ? (
-                  <p className="text-center text-[#8B7A70] py-8 text-[14px]">No parking history yet</p>
+                  <p className={`text-center py-8 text-[14px] ${darkMode ? 'text-[#777]' : 'text-[#8B7A70]'}`}>No parking history yet</p>
                 ) : (
                   displayedHistoryItems.map((session) => (
                     <div key={session.id} className="relative overflow-hidden rounded-lg">
@@ -651,20 +671,20 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
                         setSwipedHistoryId(deltaX > 45 ? session.id : null);
                         setTouchStartX(null);
                       }}
-                      className={`relative bg-[#F7F7F7] border border-[#CDBEB2] rounded-lg px-4 py-3.5 flex items-center gap-3.5 transition-transform ${swipedHistoryId === session.id ? '-translate-x-12' : 'translate-x-0'}`}
+                      className={`relative ${darkMode ? 'bg-[#2a2a2a] border-[#444]' : 'bg-[#F7F7F7] border-[#CDBEB2]'} border rounded-lg px-4 py-3.5 flex items-center gap-3.5 transition-transform ${swipedHistoryId === session.id ? '-translate-x-12' : 'translate-x-0'}`}
                     >
                       <HistoryThumbnail session={session} />
 
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[15px] leading-tight font-semibold text-[#2A1E17] truncate">{session.location}</h4>
-                        <p className="mt-1.5 text-[13px] text-[#5E4D43] leading-[1.25]">
+                        <h4 className={`text-[15px] leading-tight font-semibold truncate ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>{session.location}</h4>
+                        <p className={`mt-1.5 text-[13px] leading-[1.25] ${darkMode ? 'text-[#888]' : 'text-[#5E4D43]'}`}>
                           {formatHistoryDate(session.started_at)} • {calculateDuration(session.started_at, session.ended_at || new Date().toISOString())}
                         </p>
                       </div>
 
                       <div className="text-right">
-                        <p className="text-[15px] leading-none font-bold text-[#2A1E17]">${(session.payment_due ?? 0).toFixed(2)}</p>
-                        <span className={`inline-flex mt-1.5 px-3 py-0.5 rounded-full text-[11px] font-medium leading-none ${(session.payment_due ?? 0) > 0 ? 'bg-[#FDE68A] text-[#A05A07]' : 'bg-[#DCFCE7] text-[#15803D]'}`}>
+                        <p className={`text-[15px] leading-none font-bold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>${(session.payment_due ?? 0).toFixed(2)}</p>
+                        <span className={`inline-flex mt-1.5 px-3 py-0.5 rounded-full text-[11px] font-medium leading-none ${(session.payment_due ?? 0) > 0 ? (darkMode ? 'bg-[#664D00] text-[#FFD700]' : 'bg-[#FDE68A] text-[#A05A07]') : (darkMode ? 'bg-[#1a3a1a] text-[#4ade80]' : 'bg-[#DCFCE7] text-[#15803D]')}`}>
                           {(session.payment_due ?? 0) > 0 ? 'PAID' : 'FREE'}
                         </span>
                       </div>
@@ -673,35 +693,16 @@ export function Dashboard({ onParkMyCar, onSettingsClick }: DashboardProps) {
                   ))
                 )}
                 {showAllHistory && isLoadingMoreHistory && (
-                  <p className="text-center text-[#8B7A70] py-2 text-[13px]">Loading more...</p>
+                  <p className={`text-center py-2 text-[13px] ${darkMode ? 'text-[#777]' : 'text-[#8B7A70]'}`}>Loading more...</p>
                 )}
                 {showAllHistory && !hasMoreHistory && historyItems.length > 0 && (
-                  <p className="text-center text-[#8B7A70] py-2 text-[13px]">No more history</p>
+                  <p className={`text-center py-2 text-[13px] ${darkMode ? 'text-[#777]' : 'text-[#8B7A70]'}`}>No more history</p>
                 )}
               </div>
             </>
           )}
 
         </section>
-
-        <div className="relative border-t border-[#D7CCC2] h-[78px] bg-[#F4F0EC] px-8 flex items-center justify-between text-[#4B3A31]">
-          <button className={`flex flex-col items-center justify-center ${isParked ? 'text-[#4B3A31]' : 'text-[#D97706]'}`}>
-            <Home size={20} />
-            <span className="text-[11px] mt-1">Home</span>
-          </button>
-          <button onClick={onParkMyCar} className={`flex flex-col items-center justify-center ${isParked ? 'text-[#D97706]' : ''}`}>
-            <CarFront size={20} />
-            <span className="text-[11px] mt-1">Park</span>
-          </button>
-          <button className="flex flex-col items-center justify-center">
-            <Search size={20} />
-            <span className="text-[11px] mt-1">Check</span>
-          </button>
-          <button onClick={onSettingsClick} className="flex flex-col items-center justify-center">
-            <Settings size={20} />
-            <span className="text-[11px] mt-1">Settings</span>
-          </button>
-        </div>
       </div>
 
       <div className="sr-only">

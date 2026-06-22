@@ -121,10 +121,12 @@ export default function App() {
 
 return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
-      {screen.name !== 'dashboard' && screen.name !== 'mark-spot' && screen.name !== 'scan' && <TopAppBar onHelpClick={() => setShowHelp(true)} />}
+      {screen.name === 'analysis' && <TopAppBar onHelpClick={() => setShowHelp(true)} />}
 
       {screen.name === 'dashboard' && (
         <Dashboard
+          isVisible={screen.name === 'dashboard'}
+          activeTab={activeTab}
           onParkMyCar={() => {
             setScreen({ name: 'mark-spot' });
             setActiveTab('park');

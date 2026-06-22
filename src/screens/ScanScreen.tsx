@@ -169,7 +169,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-xs flex flex-col">
+    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-20 pt-xs flex flex-col">
       {/* Landing Screen - Idle State */}
       {scanState === 'idle' && (
         <>
@@ -241,7 +241,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
                   <img
                     src={capturedImage}
                     alt="Captured parking sign"
-                    className="w-full h-72 object-cover"
+                    className="w-full h-48 object-cover"
                   />
                   {isProcessing && (
                     <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-md">
@@ -262,7 +262,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
               ) : (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full h-72 flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant"
+                  className="w-full h-48 flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant"
                 >
                   <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: '40px' }}>

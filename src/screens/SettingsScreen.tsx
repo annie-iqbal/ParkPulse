@@ -195,27 +195,27 @@ const saveSettings = (key: string, value: boolean | number) => {
           <div className="space-y-sm">
             <button
               onClick={() => showHelp?.()}
-              className="w-full text-left py-md px-lg rounded-lg hover:bg-surface-container transition-colors flex items-center justify-between"
+              className="w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between border border-outline-variant"
             >
               <div>
                 <p className="text-label-lg font-semibold text-on-surface">How to use ParkWise AI</p>
                 <p className="text-label-sm text-on-surface-variant">Learn how to scan and manage parking</p>
               </div>
-              <span className="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
+              <span className="material-symbols-outlined text-primary">arrow_forward</span>
             </button>
-            <button className="w-full text-left py-md px-lg rounded-lg hover:bg-surface-container transition-colors flex items-center justify-between">
+            <button className="w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between border-2 border-primary">
               <div>
-                <p className="text-label-lg font-semibold text-on-surface">Contact Support</p>
+                <p className="text-label-lg font-semibold text-primary">Contact Support</p>
                 <p className="text-label-sm text-on-surface-variant">Send us feedback or report issues</p>
               </div>
-              <span className="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
+              <span className="material-symbols-outlined text-primary">arrow_forward</span>
             </button>
-            <button className="w-full text-left py-md px-lg rounded-lg hover:bg-surface-container transition-colors flex items-center justify-between">
+            <button className="w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between border border-outline-variant">
               <div>
                 <p className="text-label-lg font-semibold text-on-surface">Privacy Policy</p>
                 <p className="text-label-sm text-on-surface-variant">View our privacy & terms</p>
               </div>
-              <span className="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
+              <span className="material-symbols-outlined text-primary">arrow_forward</span>
             </button>
           </div>
         </section>

@@ -58,9 +58,28 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraPreview, setCameraPreview] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load dark mode setting on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('parkwise_settings');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      setDarkMode(settings.darkMode ?? false);
+    }
+
+    // Listen for dark mode changes
+    const handleDarkModeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>;
+      setDarkMode(customEvent.detail);
+    };
+
+    window.addEventListener('darkModeToggled', handleDarkModeChange);
+    return () => window.removeEventListener('darkModeToggled', handleDarkModeChange);
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -179,14 +198,18 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
         imageUrl = ensurePublicStorageUrl(publicUrl);
       } catch (error) {
         console.error('Image upload failed:', error);
-        setIsSaving(false);
         const message = error instanceof Error ? error.message : 'Unknown upload error';
-        if (message.toLowerCase().includes('bucket not found')) {
-          alert('Image storage is not set up yet. Please apply the Supabase migration that creates the parking-images bucket, then try again.');
+        
+        // Check if bucket doesn't exist
+        if (message.toLowerCase().includes('not found') || message.toLowerCase().includes('does not exist')) {
+          console.warn('Parking images bucket not set up. Proceeding without image upload.');
+          // Continue without image - imageUrl stays null
         } else {
+          // For other errors, alert and abort
+          setIsSaving(false);
           alert(`Image upload failed: ${message}`);
+          return;
         }
-        return;
       }
     }
 
@@ -453,9 +476,9 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
   }
 
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-3 sm:px-4 pt-4 pb-28 bg-[#EEE8E2]">
-      <div className="mx-auto w-full max-w-[540px] rounded-[20px] border border-[#D6CBC2] bg-[#F3EEEA] shadow-[0_4px_22px_rgba(28,25,23,0.12)] overflow-hidden">
-        <header className="h-[62px] px-4 sm:px-5 border-b border-[#D7CCC2] flex items-center justify-between bg-[#F4F0EC]">
+    <main className={`flex-grow w-full max-w-[600px] mx-auto px-3 sm:px-4 pt-4 pb-28 ${darkMode ? 'bg-[#1a1a1a]' : 'bg-[#EEE8E2]'}`}>
+      <div className={`mx-auto w-full max-w-[540px] rounded-[20px] border ${darkMode ? 'border-[#444] bg-[#242424]' : 'border-[#D6CBC2] bg-[#F3EEEA]'} shadow-[0_4px_22px_rgba(28,25,23,0.12)] overflow-hidden`}>
+        <header className={`h-[62px] px-4 sm:px-5 border-b ${darkMode ? 'border-[#444] bg-[#1f1f1f]' : 'border-[#D7CCC2] bg-[#F4F0EC]'} flex items-center justify-between`}>
           <div className="flex items-center gap-2 text-[#D97706]">
             <span className="material-symbols-outlined text-[22px]">menu</span>
             <span className="text-[34px] leading-none font-bold">P</span>
@@ -468,11 +491,11 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
         </header>
 
         {isOfflineMode && (
-          <div className="bg-[#F2B79D] border-b border-[#E9A88A] px-4 py-2.5 text-[#6A2D17] flex items-start gap-2">
+          <div className={`${darkMode ? 'bg-[#5c3d1f] border-[#6b4a2a]' : 'bg-[#F2B79D] border-[#E9A88A]'} border-b px-4 py-2.5 ${darkMode ? 'text-[#ffa500]' : 'text-[#6A2D17]'} flex items-start gap-2`}>
             <WifiOff size={16} className="mt-0.5" />
             <div>
               <p className="text-[13px] font-semibold leading-tight">No internet connection. Manual entry required.</p>
-              <p className="text-[12px] opacity-80">Your data will sync once you're back online.</p>
+              <p className={`text-[12px] opacity-80 ${darkMode ? 'text-[#ffb84d]' : ''}`}>Your data will sync once you're back online.</p>
             </div>
           </div>
         )}
@@ -481,8 +504,8 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
           {!isOfflineMode && (
             <>
               <div>
-                <h2 className="text-[38px] font-semibold text-[#271E1B] leading-[1.05]">Mark Your Spot</h2>
-                <p className="mt-2 text-[15px] text-[#5F514A] leading-[1.35]">
+                <h2 className={`text-[38px] font-semibold leading-[1.05] ${darkMode ? 'text-[#e0e0e0]' : 'text-[#271E1B]'}`}>Mark Your Spot</h2>
+                <p className={`mt-2 text-[15px] leading-[1.35] ${darkMode ? 'text-[#aaa]' : 'text-[#5F514A]'}`}>
                   Ensure you find your car easily later by providing precise details.
                 </p>
               </div>
@@ -532,37 +555,37 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
           )}
 
           {isOfflineMode && (
-            <div className="rounded-[10px] border border-[#CDBFB4] bg-[#F5F1EE] p-5 text-center">
-              <div className="w-20 h-20 rounded-xl bg-white shadow-sm mx-auto grid place-items-center text-[#8D4F00] mb-4">
+            <div className={`rounded-[10px] border p-5 text-center ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F5F1EE]'}`}>
+              <div className={`w-20 h-20 rounded-xl shadow-sm mx-auto grid place-items-center mb-4 ${darkMode ? 'bg-[#333] text-[#ffb84d]' : 'bg-white text-[#8D4F00]'}`}>
                 <CircleOff size={34} />
               </div>
-              <h3 className="text-[38px] leading-tight font-semibold text-[#2A1E17]">GPS Unavailable</h3>
-              <p className="mt-2 text-[15px] text-[#5A4B42] leading-[1.35]">
+              <h3 className={`text-[38px] leading-tight font-semibold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>GPS Unavailable</h3>
+              <p className={`mt-2 text-[15px] leading-[1.35] ${darkMode ? 'text-[#aaa]' : 'text-[#5A4B42]'}`}>
                 We can't pinpoint your exact location right now. Please describe your spot below.
               </p>
             </div>
           )}
 
-          <div className="rounded-[10px] border border-[#CDBFB4] p-4 bg-[#F8F5F2]">
-            <label className="text-[13px] font-semibold tracking-[0.08em] text-[#4A3D35] uppercase block mb-2">
+          <div className={`rounded-[10px] border p-4 ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F8F5F2]'}`}>
+            <label className={`text-[13px] font-semibold tracking-[0.08em] uppercase block mb-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
               Parking Description *
             </label>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value.slice(0, maxChars))}
               placeholder={isOfflineMode ? 'e.g. Level 3, near elevator B, Section 4A...' : 'e.g. Level 3, Blue Zone, Near Pillar B4...'}
-              className="w-full min-h-[112px] rounded-[8px] border border-[#D3C5BB] bg-[#F6F1EE] px-4 py-3 text-[15px] text-[#3F312A] placeholder:text-[#8B7A70] resize-none outline-none focus:border-[#D97706]/60"
+              className={`w-full min-h-[112px] rounded-[8px] border px-4 py-3 text-[15px] resize-none outline-none focus:border-[#D97706]/60 ${darkMode ? 'border-[#444] bg-[#333] text-[#ddd] placeholder:text-[#777]' : 'border-[#D3C5BB] bg-[#F6F1EE] text-[#3F312A] placeholder:text-[#8B7A70]'}`}
             />
-            <div className="mt-2 flex justify-end text-[12px] font-semibold text-[#6C5D54]">
+            <div className={`mt-2 flex justify-end text-[12px] font-semibold ${darkMode ? 'text-[#777]' : 'text-[#6C5D54]'}`}>
               {description.length}/{maxChars}
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-[#CDBFB4] p-4 bg-[#F8F5F2] space-y-4">
+          <div className={`rounded-[10px] border p-4 space-y-4 ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F8F5F2]'}`}>
             <div>
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-[#4A3D35]">
-                  <CircleDollarSign size={18} className="text-[#8F4700]" />
+                <div className={`flex items-center gap-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
+                  <CircleDollarSign size={18} className={darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'} />
                   <span className="text-[13px] font-semibold tracking-[0.08em] uppercase">Is Paid</span>
                 </div>
                 <button
@@ -575,31 +598,31 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
                 </button>
               </div>
               {isPaid && (
-                <div className="mt-2 h-11 rounded-[8px] border border-[#D3C5BB] bg-[#F6F1EE] px-3 flex items-center gap-2">
-                  <span className="text-[#8F4700] font-bold">$</span>
+                <div className={`mt-2 h-11 rounded-[8px] border px-3 flex items-center gap-2 ${darkMode ? 'border-[#444] bg-[#333]' : 'border-[#D3C5BB] bg-[#F6F1EE]'}`}>
+                  <span className={`font-bold ${darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'}`}>$</span>
                   <input
                     value={paymentDueInput}
                     onChange={(event) => setPaymentDueInput(event.target.value.replace(/[^0-9.]/g, ''))}
                     placeholder="Paid amount"
                     inputMode="decimal"
-                    className="w-full bg-transparent outline-none text-[15px] font-semibold text-[#3F312A]"
+                    className={`w-full bg-transparent outline-none text-[15px] font-semibold ${darkMode ? 'text-[#ddd]' : 'text-[#3F312A]'}`}
                   />
                 </div>
               )}
-              <p className="mt-1.5 text-[12px] text-[#6C5D54]">
+              <p className={`mt-1.5 text-[12px] ${darkMode ? 'text-[#777]' : 'text-[#6C5D54]'}`}>
                 Turn on if payment is complete, then enter the paid amount.
               </p>
             </div>
 
             <div>
-              <label className="text-[13px] font-semibold tracking-[0.08em] text-[#4A3D35] uppercase block mb-2">
+              <label className={`text-[13px] font-semibold tracking-[0.08em] uppercase block mb-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
                 Parking Time
               </label>
               <div className="relative">
                 <select
                   value={durationMinutes}
                   onChange={(event) => setDurationMinutes(Number(event.target.value))}
-                  className="w-full h-12 appearance-none rounded-[8px] border border-[#D3C5BB] bg-[#F6F1EE] px-3 pr-10 text-[15px] font-semibold text-[#3F312A] outline-none focus:border-[#D97706]/60"
+                  className={`w-full h-12 appearance-none rounded-[8px] border px-3 pr-10 text-[15px] font-semibold outline-none focus:border-[#D97706]/60 ${darkMode ? 'border-[#444] bg-[#333] text-[#ddd]' : 'border-[#D3C5BB] bg-[#F6F1EE] text-[#3F312A]'}`}
                 >
                 {DURATION_OPTIONS.map((minutes) => (
                   <option
@@ -610,16 +633,16 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
                   </option>
                 ))}
                 </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8F4700] text-[14px]">⌄</span>
+                <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[14px] ${darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'}`}>⌄</span>
               </div>
-              <p className="mt-2 text-[12px] text-[#6C5D54]">
+              <p className={`mt-2 text-[12px] ${darkMode ? 'text-[#777]' : 'text-[#6C5D54]'}`}>
                 Select how long this parking session should run.
               </p>
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-[#CDBFB4] p-4 bg-[#F8F5F2]">
-            <label className="text-[13px] font-semibold tracking-[0.08em] text-[#4A3D35] uppercase block mb-3">
+          <div className={`rounded-[10px] border p-4 ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F8F5F2]'}`}>
+            <label className={`text-[13px] font-semibold tracking-[0.08em] uppercase block mb-3 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
               Visual Aid {isOfflineMode ? '' : '(Optional)'}
             </label>
 
