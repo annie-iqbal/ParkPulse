@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TopAppBar } from './components/TopAppBar';
 import { BottomNav } from './components/BottomNav';
 import { Dashboard } from './screens/Dashboard';
 import { MarkSpotScreen } from './screens/MarkSpotScreen';
@@ -24,7 +23,7 @@ export default function App() {
   });
   const [screen, setScreen] = useState<Screen>({ name: 'dashboard' });
   const [showHelp, setShowHelp] = useState(false);
-  const [, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   // Initialize screen based on loaded activeTab on mount
   useEffect(() => {
@@ -121,8 +120,6 @@ export default function App() {
 
 return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
-      {screen.name === 'analysis' && <TopAppBar onHelpClick={() => setShowHelp(true)} />}
-
       {screen.name === 'dashboard' && (
         <Dashboard
           isVisible={screen.name === 'dashboard'}
@@ -177,43 +174,41 @@ return (
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {showHelp && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">​​
-          <div className="bg-surface rounded-3xl p-6 max-h-[80vh] overflow-y-auto w-full max-w-[540px] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">​​
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">
+          <div className={`rounded-3xl p-6 max-h-[80vh] overflow-y-auto w-full max-w-[540px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] ${darkMode ? 'bg-[#1f1f1f]' : 'bg-surface'}`}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-headline-sm font-bold">Help</h2>
+              <h2 className={`text-headline-sm font-bold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#271E1B]'}`}>Help</h2>
               <button
                 onClick={() => setShowHelp(false)}
                 className="hover:opacity-80 transition-opacity active:scale-95"
               >
-                <span className="material-symbols-outlined text-on-surface">close</span>
+                <span className={`material-symbols-outlined ${darkMode ? 'text-[#ddd]' : 'text-on-surface'}`}>close</span>
               </button>
             </div>
             
             <div className="space-y-6">
-              <div>
-                <h3 className="text-title-md font-semibold mb-2">How to Use ParkWise AI</h3>
-                <p className="text-body-md text-on-surface-variant">Scan parking signs to get AI-powered parking insights and automatic session tracking.</p>
+              <div className={`rounded-lg border p-md ${darkMode ? 'border-[#D97706]/40 bg-[#332416]' : 'border-[#D97706]/30 bg-[#FFF7ED]'}`}>
+                <h3 className="text-title-md font-semibold mb-2 text-[#D97706]">How to Use ParkWise AI</h3>
+                <p className={`text-body-md leading-relaxed ${darkMode ? 'text-[#e8ddd3]' : 'text-on-surface-variant'}`}>Scan parking signs to get AI-powered parking insights and automatic session tracking.</p>
               </div>
 
-              <div>
-                <h4 className="text-title-sm font-semibold mb-2">Scan a Parking Sign</h4>
-                <p className="text-body-md text-on-surface-variant">
+              <div className={`rounded-lg border p-md ${darkMode ? 'border-[#D97706]/40 bg-[#332416]' : 'border-[#D97706]/30 bg-[#FFF7ED]'}`}>
+                <h4 className="text-title-sm font-semibold mb-2 text-[#D97706]">Scan a Parking Sign</h4>
+                <p className={`text-body-md leading-relaxed ${darkMode ? 'text-[#e8ddd3]' : 'text-on-surface-variant'}`}>
                   Tap the camera icon at the bottom and take a photo of a parking sign. Our AI will analyze the sign and provide parking duration and restrictions.
                 </p>
               </div>
 
-              <div>
-                <h4 className="text-title-sm font-semibold mb-2">Start a Parking Session</h4>
-                <p className="text-body-md text-on-surface-variant">
+              <div className={`rounded-lg border p-md ${darkMode ? 'border-[#D97706]/40 bg-[#332416]' : 'border-[#D97706]/30 bg-[#FFF7ED]'}`}>
+                <h4 className="text-title-sm font-semibold mb-2 text-[#D97706]">Start a Parking Session</h4>
+                <p className={`text-body-md leading-relaxed ${darkMode ? 'text-[#e8ddd3]' : 'text-on-surface-variant'}`}>
                   After analysis, tap "Start Session" to begin tracking your parking time. Your location will be saved for reference.
                 </p>
               </div>
 
-
-
-              <div>
-                <h4 className="text-title-sm font-semibold mb-2">Get Reminders</h4>
-                <p className="text-body-md text-on-surface-variant">
+              <div className={`rounded-lg border p-md ${darkMode ? 'border-[#D97706]/40 bg-[#332416]' : 'border-[#D97706]/30 bg-[#FFF7ED]'}`}>
+                <h4 className="text-title-sm font-semibold mb-2 text-[#D97706]">Get Reminders</h4>
+                <p className={`text-body-md leading-relaxed ${darkMode ? 'text-[#e8ddd3]' : 'text-on-surface-variant'}`}>
                   Enable the 15-minute reminder toggle when starting a session to get notified before your parking time expires.
                 </p>
               </div>

@@ -9,6 +9,10 @@ interface SettingsScreenProps {
 
 const TIMING_OPTIONS = [5, 10, 15, 20];
 type SupportAction = 'help' | 'contact' | 'privacy';
+type SupportModalAction = 'contact' | 'privacy';
+
+const SUPPORT_EMAIL = 'support@parkwise.ai';
+const PRIVACY_POLICY_URL = 'https://parkwise.ai/privacy';
 
 export function SettingsScreen({ showHelp }: SettingsScreenProps) {
   const [appVersion] = useState('1.0.0');
@@ -17,6 +21,7 @@ export function SettingsScreen({ showHelp }: SettingsScreenProps) {
   const [locationTracking, setLocationTracking] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [selectedSupportAction, setSelectedSupportAction] = useState<SupportAction | null>(null);
+  const [supportModalAction, setSupportModalAction] = useState<SupportModalAction | null>(null);
 
   useEffect(() => {
     // Load user preferences from localStorage
@@ -61,12 +66,6 @@ const saveSettings = (key: string, value: boolean | number) => {
   const handleReminderTimingChange = (minutes: number) => {
     setReminderLeadMinutes(minutes);
     saveSettings('reminderLeadMinutes', minutes);
-  };
-
-  const handleLocationChange = () => {
-    const newValue = !locationTracking;
-    setLocationTracking(newValue);
-    saveSettings('locationTracking', newValue);
   };
 
   const handleDarkModeChange = () => {
@@ -151,36 +150,6 @@ const saveSettings = (key: string, value: boolean | number) => {
           </div>
         </section>
 
-        {/* Location Section */}
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
-          <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-[#D97706]">location_on</span>
-            Location & Privacy
-          </h2>
-          <div className="space-y-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-label-lg font-semibold text-on-surface">Location Tracking</p>
-                <p className="text-label-sm text-on-surface-variant">Track parking location for safety</p>
-              </div>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={locationTracking}
-                  onChange={handleLocationChange}
-                  className="w-5 h-5 cursor-pointer accent-[#D97706]"
-                />
-              </label>
-            </div>
-            <div className="bg-surface-container p-md rounded-lg border border-outline-variant">
-              <p className="text-label-sm text-on-surface-variant">
-                <span className="material-symbols-outlined text-[16px] align-text-bottom mr-xs">info</span>
-                Your location is only stored during active parking sessions and never shared with third parties.
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* Display Section */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
@@ -226,7 +195,10 @@ const saveSettings = (key: string, value: boolean | number) => {
               <span className="material-symbols-outlined text-[#D97706]">arrow_forward</span>
             </button>
             <button
-              onClick={() => setSelectedSupportAction('contact')}
+              onClick={() => {
+                setSelectedSupportAction('contact');
+                setSupportModalAction('contact');
+              }}
               className={getSupportButtonClass('contact')}
             >
               <div>
@@ -236,7 +208,10 @@ const saveSettings = (key: string, value: boolean | number) => {
               <span className="material-symbols-outlined text-[#D97706]">arrow_forward</span>
             </button>
             <button
-              onClick={() => setSelectedSupportAction('privacy')}
+              onClick={() => {
+                setSelectedSupportAction('privacy');
+                setSupportModalAction('privacy');
+              }}
               className={getSupportButtonClass('privacy')}
             >
               <div>
@@ -261,6 +236,58 @@ const saveSettings = (key: string, value: boolean | number) => {
         </section>
           </div>
         </section>
+
+      {supportModalAction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">
+          <div className={`rounded-3xl p-6 max-h-[80vh] overflow-y-auto w-full max-w-[540px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] ${darkMode ? 'bg-[#1f1f1f]' : 'bg-surface'}`}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className={`text-headline-sm font-bold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#271E1B]'}`}>
+                {supportModalAction === 'contact' ? 'Customer Support' : 'Privacy Policy'}
+              </h2>
+              <button
+                onClick={() => setSupportModalAction(null)}
+                className="hover:opacity-80 transition-opacity active:scale-95"
+              >
+                <span className={`material-symbols-outlined ${darkMode ? 'text-[#ddd]' : 'text-on-surface'}`}>close</span>
+              </button>
+            </div>
+
+            <div className={`rounded-lg border p-md ${darkMode ? 'border-[#D97706]/40 bg-[#332416]' : 'border-[#D97706]/30 bg-[#FFF7ED]'}`}>
+              {supportModalAction === 'contact' ? (
+                <>
+                  <p className="text-label-lg font-semibold text-[#D97706] mb-xs">Customer Support</p>
+                  <p className={`text-label-sm leading-relaxed ${darkMode ? 'text-[#e8ddd3]' : 'text-on-surface-variant'}`}>
+                    Need help with sign analysis, session timing, or saved locations? Contact our support team and include a screenshot plus your device details for faster assistance.
+                  </p>
+                  <a
+                    href={`mailto:${SUPPORT_EMAIL}?subject=ParkWise AI Support`}
+                    className="inline-flex items-center gap-xs mt-sm text-label-sm font-semibold text-[#D97706] hover:underline"
+                  >
+                    Email {SUPPORT_EMAIL}
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                  </a>
+                </>
+              ) : (
+                <>
+                  <p className="text-label-lg font-semibold text-[#D97706] mb-xs">Privacy Policy</p>
+                  <p className={`text-label-sm leading-relaxed ${darkMode ? 'text-[#e8ddd3]' : 'text-on-surface-variant'}`}>
+                    ParkWise AI uses your session data only to provide parking guidance and reminders. We do not sell personal data, and location details are limited to active parking functionality.
+                  </p>
+                  <a
+                    href={PRIVACY_POLICY_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-xs mt-sm text-label-sm font-semibold text-[#D97706] hover:underline"
+                  >
+                    Read full privacy policy
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AppScreenShell>
   );
 }

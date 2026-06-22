@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ParkingAnalysis } from '../types';
+import { AppHeader } from '../components/layout/AppHeader';
+import { AppScreenShell } from '../components/layout/AppScreenShell';
 
 interface AnalysisResultProps {
   analysis: ParkingAnalysis;
@@ -15,20 +17,34 @@ function getVerdictIcon(canPark: boolean) {
 
 export function AnalysisResult({ analysis }: AnalysisResultProps) {
   const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('parkwise_settings');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      setDarkMode(settings.darkMode ?? false);
+    }
+
+    const handleDarkModeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<boolean>;
+      setDarkMode(customEvent.detail);
+    };
+
+    window.addEventListener('darkModeToggled', handleDarkModeChange);
+    return () => window.removeEventListener('darkModeToggled', handleDarkModeChange);
+  }, []);
 
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg">
-      {/* Header Section with Breadcrumb */}
+    <AppScreenShell darkMode={darkMode}>
+      <AppHeader darkMode={darkMode} />
+
+      <section className="p-5 pb-28">
       <section className="mb-xl">
-        <nav className="flex items-center gap-xs mb-md text-on-surface-variant text-label-sm">
-          <span>Analysis</span>
-          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <span className="text-primary font-semibold">Result</span>
-        </nav>
-        <h1 className="text-display-status-mobile font-extrabold mb-sm text-on-surface">
+        <h1 className={`text-[38px] font-semibold leading-[1.05] ${darkMode ? 'text-[#e0e0e0]' : 'text-[#271E1B]'}`}>
           {analysis.verdict}
         </h1>
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">{analysis.description}</p>
+        <p className={`mt-2 text-[15px] leading-[1.35] ${darkMode ? 'text-[#aaa]' : 'text-[#5F514A]'} max-w-2xl`}>{analysis.description}</p>
       </section>
 
       {/* Bento Grid Layout */}
@@ -172,8 +188,7 @@ export function AnalysisResult({ analysis }: AnalysisResultProps) {
           </div>
         </details>
       )}
-
-
-    </main>
+      </section>
+    </AppScreenShell>
   );
 }

@@ -414,7 +414,6 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
               className="w-full h-[50px] rounded-[10px] bg-[#D97706] text-white text-[15px] font-semibold flex items-center justify-center gap-2 shadow-[0_8px_18px_rgba(69,26,3,0.22)] active:scale-[0.99] transition-transform tracking-[0.02em] disabled:opacity-50"
             >
               {scanState === 'error' ? 'Try Again' : 'Analyze Sign'}
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_right</span>
             </button>
           )}
         </>
