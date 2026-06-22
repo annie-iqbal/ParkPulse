@@ -14,10 +14,6 @@ import { getReminderSettings } from '../lib/reminderSettings';
 
 interface MarkSpotScreenProps {
   onConfirm?: (sessionId: string) => void;
-  onHomeClick?: () => void;
-  onParkClick?: () => void;
-  onCheckClick?: () => void;
-  onSettingsClick?: () => void;
 }
 
 type LocationState = 'loading' | 'ready' | 'offline';
@@ -47,7 +43,7 @@ function buildOpenStreetMapEmbedUrl(lat: number, lng: number): string {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${(lng - 0.005).toFixed(4)},${(lat - 0.005).toFixed(4)},${(lng + 0.005).toFixed(4)},${(lat + 0.005).toFixed(4)}&layer=mapnik&marker=${lat},${lng}`;
 }
 
-export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckClick, onSettingsClick }: MarkSpotScreenProps) {
+export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [locationState, setLocationState] = useState<LocationState>('loading');
   const [address, setAddress] = useState('Locating your parking spot...');
@@ -699,42 +695,6 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
             <ChevronRight size={18} />
           </button>
         </section>
-
-        <div className="border-t border-[#D7CCC2] h-[74px] bg-[#F4F0EC] px-6 flex items-center justify-between">
-          <button
-            onClick={onHomeClick}
-            className="flex flex-col items-center justify-center text-[#4B3A31] min-w-[56px]"
-          >
-            <span className="material-symbols-outlined text-[20px]">home</span>
-            <span className="text-[12px] mt-0.5">Home</span>
-          </button>
-
-          <button
-            onClick={onParkClick}
-            className="w-[56px] h-[56px] rounded-full bg-[#D97706] text-white flex flex-col items-center justify-center"
-          >
-            <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24" }}>
-              local_parking
-            </span>
-            <span className="text-[12px] leading-none">Park</span>
-          </button>
-
-          <button
-            onClick={onCheckClick}
-            className="flex flex-col items-center justify-center text-[#4B3A31] min-w-[56px]"
-          >
-            <span className="material-symbols-outlined text-[20px]">search</span>
-            <span className="text-[12px] mt-0.5">Check</span>
-          </button>
-
-          <button
-            onClick={onSettingsClick}
-            className="flex flex-col items-center justify-center text-[#4B3A31] min-w-[56px]"
-          >
-            <span className="material-symbols-outlined text-[20px]">settings</span>
-            <span className="text-[12px] mt-0.5">Settings</span>
-          </button>
-        </div>
       </div>
     </main>
   );
