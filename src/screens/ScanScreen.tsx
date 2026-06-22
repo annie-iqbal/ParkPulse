@@ -5,10 +5,6 @@ import { ParkingAnalysis } from '../types';
 
 interface ScanScreenProps {
   onAnalysisComplete: (analysis: ParkingAnalysis) => void;
-  onHomeClick?: () => void;
-  onParkClick?: () => void;
-  onCheckClick?: () => void;
-  onSettingsClick?: () => void;
 }
 
 type ScanState = 'idle' | 'captured' | 'locating' | 'analyzing' | 'error';
@@ -36,7 +32,7 @@ async function extractEdgeFunctionError(error: unknown): Promise<string> {
   return err.message ?? 'Edge function call failed.';
 }
 
-export function ScanScreen({ onAnalysisComplete, onHomeClick, onParkClick, onCheckClick, onSettingsClick }: ScanScreenProps) {
+export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);

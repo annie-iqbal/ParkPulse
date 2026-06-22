@@ -153,10 +153,6 @@ return (
       {screen.name === 'scan' && (
         <ScanScreen 
           onAnalysisComplete={handleAnalysisComplete}
-          onHomeClick={() => { setScreen({ name: 'dashboard' }); setActiveTab('home'); }}
-          onParkClick={() => { setScreen({ name: 'mark-spot' }); setActiveTab('park'); }}
-          onCheckClick={() => { setScreen({ name: 'scan' }); setActiveTab('check'); }}
-          onSettingsClick={() => { setScreen({ name: 'settings' }); setActiveTab('settings'); }}
         />
       )}
 
