@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { getCurrentPosition } from '../lib/geolocation';
+
 import { ParkingAnalysis } from '../types';
 
 interface AnalysisResultProps {
   analysis: ParkingAnalysis;
-  onSessionStart: (sessionId: string) => void;
 }
 function getVerdictColor(canPark: boolean) {
   return canPark ? 'tertiary' : 'error';
@@ -15,70 +13,8 @@ function getVerdictIcon(canPark: boolean) {
   return canPark ? 'check_circle' : 'error';
 }
 
-export function AnalysisResult({ analysis, onSessionStart }: AnalysisResultProps) {
-  const [loading, setLoading] = useState(false);
+export function AnalysisResult({ analysis }: AnalysisResultProps) {
   const [reminderEnabled, setReminderEnabled] = useState(true);
-
-  async function handleStartSession() {
-    if (!analysis.canPark) return;
-    setLoading(true);
-
-    const now = new Date();
-    let expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
-    let lat: number | undefined;
-    let lng: number | undefined;
-
-    // Get current geolocation
-    try {
-      const position = await getCurrentPosition();
-      lat = position.lat;
-      lng = position.lng;
-    } catch (err) {
-      console.error('Failed to get geolocation:', err);
-    }
-
-    // Parse "maxDuration" if present, e.g. "4 Hours", "2 hours"
-    if (analysis.maxDuration) {
-      const match = analysis.maxDuration.match(/(\d+)\s*hour/i);
-      if (match) {
-        const hours = parseInt(match[1]);
-        expiresAt = new Date(now.getTime() + hours * 60 * 60 * 1000);
-      }
-    } 
-    // Fall back to "until" time if no maxDuration, e.g. "4:00 PM"
-    else if (analysis.until) {
-      const match = analysis.until.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (match) {
-        const [, h, m, period] = match;
-        const candidate = new Date();
-        candidate.setHours(
-          parseInt(h) + (period.toUpperCase() === 'PM' && parseInt(h) !== 12 ? 12 : 0),
-          parseInt(m),
-          0,
-          0
-        );
-        if (candidate > now) expiresAt = candidate;
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('parking_sessions')
-      .insert({
-        location: analysis.location,
-        zone: '',
-        started_at: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
-        reminder_enabled: reminderEnabled,
-        status: 'active',
-        lat,
-        lng,
-      })
-      .select()
-      .single();
-
-    setLoading(false);
-    if (!error && data) onSessionStart(data.id);
-  }
 
   return (
     <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg">
@@ -237,19 +173,7 @@ export function AnalysisResult({ analysis, onSessionStart }: AnalysisResultProps
         </details>
       )}
 
-      {/* Action Button */}
-      <div className="fixed bottom-24 left-0 right-0 max-w-[600px] mx-auto px-margin-mobile">
-        {analysis.canPark && (
-          <button
-            onClick={handleStartSession}
-            disabled={loading}
-            className="w-full bg-primary py-3 rounded-lg flex items-center justify-center gap-sm text-on-primary text-headline-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-70"
-          >
-            <span className="material-symbols-outlined">timer</span>
-            <span>{loading ? 'Starting...' : 'Start Session'}</span>
-          </button>
-        )}
-      </div>
+
     </main>
   );
 }

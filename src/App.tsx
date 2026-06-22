@@ -1,30 +1,51 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TopAppBar } from './components/TopAppBar';
 import { BottomNav } from './components/BottomNav';
 import { Dashboard } from './screens/Dashboard';
 import { MarkSpotScreen } from './screens/MarkSpotScreen';
 import { ScanScreen } from './screens/ScanScreen';
 import { AnalysisResult } from './screens/AnalysisResult';
-import { ActiveSession } from './screens/ActiveSession';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ParkingAnalysis } from './types';
 
-type Tab = 'home' | 'park' | 'check' | 'activity' | 'settings';
+type Tab = 'home' | 'park' | 'check' | 'settings';
 
 type Screen =
   | { name: 'dashboard' }
   | { name: 'mark-spot' }
   | { name: 'scan' }
   | { name: 'analysis'; analysis: ParkingAnalysis }
-  | { name: 'active-session'; sessionId: string }
   | { name: 'settings' };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const saved = localStorage.getItem('parkwise_activeTab');
+    return (saved as Tab) || 'home';
+  });
   const [screen, setScreen] = useState<Screen>({ name: 'dashboard' });
-  const [lastSessionId, setLastSessionId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  // Initialize screen based on loaded activeTab on mount
+  useEffect(() => {
+    const savedTab = localStorage.getItem('parkwise_activeTab') as Tab | null;
+    if (savedTab) {
+      if (savedTab === 'home') {
+        setScreen({ name: 'dashboard' });
+      } else if (savedTab === 'park') {
+        setScreen({ name: 'mark-spot' });
+      } else if (savedTab === 'check') {
+        setScreen({ name: 'scan' });
+      } else if (savedTab === 'settings') {
+        setScreen({ name: 'settings' });
+      }
+    }
+  }, []);
+
+  // Persist activeTab to localStorage
+  useEffect(() => {
+    localStorage.setItem('parkwise_activeTab', activeTab);
+  }, [activeTab]);
 
   // Load dark mode setting and apply to document
   useEffect(() => {
@@ -80,55 +101,27 @@ export default function App() {
 
   function handleAnalysisComplete(analysis: ParkingAnalysis) {
     setScreen({ name: 'analysis', analysis });
-    setActiveTab('activity');
+    setActiveTab('check');
   }
 
-  function handleSessionStart(sessionId: string) {
-    setLastSessionId(sessionId);
-    setScreen({ name: 'active-session', sessionId });
-    setActiveTab('activity');
-  }
-
-  function handleTabChange(tab: Tab) {
+  const handleTabChange = useCallback((tab: Tab) => {
     setActiveTab(tab);
     if (tab === 'home') {
       setScreen({ name: 'dashboard' });
     } else if (tab === 'park') {
       setScreen({ name: 'mark-spot' });
     } else if (tab === 'check') {
-      if (screen.name === 'scan' || screen.name === 'analysis') {
-        // Stay on current parking sign scanning flow
-      } else {
-        setScreen({ name: 'scan' });
-      }
-    } else if (tab === 'activity') {
-      if (lastSessionId) {
-        setScreen({ name: 'active-session', sessionId: lastSessionId });
-      } else if (screen.name === 'analysis') {
-        // stay on analysis
-      } else {
-        setScreen({ name: 'dashboard' });
-      }
+      setScreen({ name: 'scan' });
     } else if (tab === 'settings') {
       setScreen({ name: 'settings' });
     }
-  }
+  }, []);
 
-  function handleRestoreSession(sessionId: string) {
-    setLastSessionId(sessionId);
-    setScreen({ name: 'active-session', sessionId });
-    setActiveTab('activity');
-  }
 
-  function handleStopSession() {
-    setLastSessionId(null);
-    setScreen({ name: 'dashboard' });
-    setActiveTab('home');
-  }
 
-  return (
+return (
     <div className="min-h-screen flex flex-col bg-surface font-sans">
-      {screen.name !== 'dashboard' && screen.name !== 'mark-spot' && <TopAppBar onHelpClick={() => setShowHelp(true)} />}
+      {screen.name !== 'dashboard' && screen.name !== 'mark-spot' && screen.name !== 'scan' && <TopAppBar onHelpClick={() => setShowHelp(true)} />}
 
       {screen.name === 'dashboard' && (
         <Dashboard
@@ -140,12 +133,7 @@ export default function App() {
             setScreen({ name: 'mark-spot' });
             setActiveTab('park');
           }}
-          onViewAllHistory={() => {
-            setActiveTab('activity');
-            if (lastSessionId) {
-              setScreen({ name: 'active-session', sessionId: lastSessionId });
-            }
-          }}
+
           onSettingsClick={() => {
             setScreen({ name: 'settings' });
             setActiveTab('settings');
@@ -156,7 +144,6 @@ export default function App() {
       {screen.name === 'mark-spot' && (
         <MarkSpotScreen
           onConfirm={(sessionId: string) => {
-            setLastSessionId(sessionId);
             setScreen({ name: 'dashboard' });
             setActiveTab('home');
           }}
@@ -180,27 +167,28 @@ export default function App() {
       )}
 
       {screen.name === 'scan' && (
-        <ScanScreen onAnalysisComplete={handleAnalysisComplete} />
+        <ScanScreen 
+          onAnalysisComplete={handleAnalysisComplete}
+          onHomeClick={() => { setScreen({ name: 'dashboard' }); setActiveTab('home'); }}
+          onParkClick={() => { setScreen({ name: 'mark-spot' }); setActiveTab('park'); }}
+          onCheckClick={() => { setScreen({ name: 'scan' }); setActiveTab('check'); }}
+          onSettingsClick={() => { setScreen({ name: 'settings' }); setActiveTab('settings'); }}
+        />
       )}
 
       {screen.name === 'analysis' && (
         <AnalysisResult
           analysis={screen.analysis}
-          onSessionStart={handleSessionStart}
         />
       )}
 
-      {screen.name === 'active-session' && (
-        <ActiveSession sessionId={screen.sessionId} onStopSession={handleStopSession} />
-      )}
+
 
       {screen.name === 'settings' && (
-        <SettingsScreen showHelp={() => setShowHelp(true)} onRestoreSession={handleRestoreSession} />
+        <SettingsScreen showHelp={() => setShowHelp(true)} />
       )}
 
-      {screen.name !== 'dashboard' && screen.name !== 'mark-spot' && (
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      )}
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {showHelp && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-md">​​
@@ -235,12 +223,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div>
-                <h4 className="text-title-sm font-semibold mb-2">Monitor Your Session</h4>
-                <p className="text-body-md text-on-surface-variant">
-                  View your active parking session in the Activity tab. A countdown timer shows remaining time, and a map displays your parking location.
-                </p>
-              </div>
+
 
               <div>
                 <h4 className="text-title-sm font-semibold mb-2">Get Reminders</h4>

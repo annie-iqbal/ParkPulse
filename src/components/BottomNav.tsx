@@ -1,4 +1,4 @@
-type Tab = 'home' | 'park' | 'check' | 'activity' | 'settings';
+type Tab = 'home' | 'park' | 'check' | 'settings';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -25,12 +25,6 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         label="Check"
         active={activeTab === 'check'}
         onClick={() => onTabChange('check')}
-      />
-      <NavItem
-        icon="history"
-        label="Activity"
-        active={activeTab === 'activity'}
-        onClick={() => onTabChange('activity')}
       />
       <NavItem
         icon="settings"
