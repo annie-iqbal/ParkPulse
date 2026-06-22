@@ -3,8 +3,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-api-version, prefer",
+  "Access-Control-Max-Age": "86400",
 };
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 interface AnalyzeRequest {
   imageBase64: string;
@@ -98,100 +106,87 @@ CRITICAL: For time ranges like "9AM-2:30PM", check if ${req.currentTime} falls w
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  try {
+    if (req.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405);
+    }
 
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+    if (!apiKey) {
+      return jsonResponse(
+        {
         error:
           "OPENROUTER_API_KEY secret not configured. Add it in Supabase Dashboard → Edge Functions → Secrets.",
-      }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+        },
+        500
+      );
+    }
 
-  let body: AnalyzeRequest;
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+    let body: AnalyzeRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
 
-  if (!body.imageBase64) {
-    return new Response(JSON.stringify({ error: "imageBase64 is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+    if (!body.imageBase64) {
+      return jsonResponse({ error: "imageBase64 is required" }, 400);
+    }
 
-  const payload = {
-    model: "openai/gpt-4o",
-    max_tokens: 1200,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: [
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${body.mimeType ?? "image/jpeg"};base64,${body.imageBase64}`,
-              detail: "high",
+    const payload = {
+      model: "openai/gpt-4o",
+      max_tokens: 1200,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${body.mimeType ?? "image/jpeg"};base64,${body.imageBase64}`,
+                detail: "high",
+              },
             },
-          },
-          { type: "text", text: buildUserPrompt(body) },
-        ],
+            { type: "text", text: buildUserPrompt(body) },
+          ],
+        },
+      ],
+    };
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://parkwise.ai",
+        "X-Title": "ParkWise AI",
       },
-    ],
-  };
+      body: JSON.stringify(payload),
+    });
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://parkwise.ai",
-      "X-Title": "ParkWise AI",
-    },
-    body: JSON.stringify(payload),
-  });
+    if (!response.ok) {
+      const errText = await response.text();
+      return jsonResponse({ error: `OpenRouter API error ${response.status}: ${errText}` }, 502);
+    }
 
-  if (!response.ok) {
-    const errText = await response.text();
-    return new Response(
-      JSON.stringify({ error: `OpenRouter API error ${response.status}: ${errText}` }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const result = await response.json();
+    const content = result.choices?.[0]?.message?.content ?? "{}";
+
+    let parsed: Record<string, unknown>;
+    try {
+      const clean = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      return jsonResponse({ error: "Failed to parse AI response", raw: content }, 502);
+    }
+
+    return jsonResponse(parsed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected analyze-parking error";
+    return jsonResponse({ error: message }, 500);
   }
-
-  const result = await response.json();
-  const content = result.choices?.[0]?.message?.content ?? "{}";
-
-  let parsed: Record<string, unknown>;
-  try {
-    const clean = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    parsed = JSON.parse(clean);
-  } catch {
-    return new Response(
-      JSON.stringify({ error: "Failed to parse AI response", raw: content }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  return new Response(JSON.stringify(parsed), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
 });

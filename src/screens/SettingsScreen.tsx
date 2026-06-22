@@ -82,12 +82,12 @@ const saveSettings = (key: string, value: boolean | number) => {
   const getSupportButtonClass = (action: SupportAction) => {
     const isSelected = selectedSupportAction === action;
     return `w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between ${
-      isSelected ? 'border-2 border-primary' : 'border border-outline-variant'
+      isSelected ? 'border-2 border-[#D97706]' : 'border border-outline-variant'
     }`;
   };
 
   const getSupportTitleClass = (action: SupportAction) => (
-    `text-label-lg font-semibold ${selectedSupportAction === action ? 'text-primary' : 'text-on-surface'}`
+    `text-label-lg font-semibold ${selectedSupportAction === action ? 'text-[#D97706]' : 'text-on-surface'}`
   );
 
   return (
@@ -108,7 +108,7 @@ const saveSettings = (key: string, value: boolean | number) => {
         {/* Notifications Section */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-primary">notifications</span>
+            <span className="material-symbols-outlined text-[#D97706]">notifications</span>
             Notifications
           </h2>
           <div className="space-y-md">
@@ -122,7 +122,7 @@ const saveSettings = (key: string, value: boolean | number) => {
                   type="checkbox"
                   checked={notificationsEnabled}
                   onChange={handleNotificationsChange}
-                  className="w-5 h-5 cursor-pointer accent-primary"
+                  className="w-5 h-5 cursor-pointer accent-[#D97706]"
                 />
               </label>
             </div>
@@ -138,8 +138,8 @@ const saveSettings = (key: string, value: boolean | number) => {
                       onClick={() => handleReminderTimingChange(minutes)}
                       className={`py-md px-sm rounded-lg border-2 text-label-sm font-semibold transition-all ${
                         reminderLeadMinutes === minutes
-                          ? 'border-primary bg-primary-fixed-dim text-primary'
-                          : 'border-outline bg-surface hover:border-primary text-on-surface'
+                          ? 'border-[#D97706] bg-[#F7D9B8] text-[#D97706]'
+                          : 'border-outline bg-surface hover:border-[#D97706] text-on-surface'
                       }`}
                     >
                       {minutes}m
@@ -154,7 +154,7 @@ const saveSettings = (key: string, value: boolean | number) => {
         {/* Location Section */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-primary">location_on</span>
+            <span className="material-symbols-outlined text-[#D97706]">location_on</span>
             Location & Privacy
           </h2>
           <div className="space-y-md">
@@ -168,7 +168,7 @@ const saveSettings = (key: string, value: boolean | number) => {
                   type="checkbox"
                   checked={locationTracking}
                   onChange={handleLocationChange}
-                  className="w-5 h-5 cursor-pointer accent-primary"
+                  className="w-5 h-5 cursor-pointer accent-[#D97706]"
                 />
               </label>
             </div>
@@ -184,7 +184,7 @@ const saveSettings = (key: string, value: boolean | number) => {
         {/* Display Section */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-primary">brightness_4</span>
+            <span className="material-symbols-outlined text-[#D97706]">brightness_4</span>
             Display
           </h2>
           <div className="space-y-md">
@@ -198,7 +198,7 @@ const saveSettings = (key: string, value: boolean | number) => {
                   type="checkbox"
                   checked={darkMode}
                   onChange={handleDarkModeChange}
-                  className="w-5 h-5 cursor-pointer accent-primary"
+                  className="w-5 h-5 cursor-pointer accent-[#D97706]"
                 />
               </label>
             </div>
@@ -208,7 +208,7 @@ const saveSettings = (key: string, value: boolean | number) => {
 {/* Help & Support Section */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-primary">help</span>
+            <span className="material-symbols-outlined text-[#D97706]">help</span>
             Help & Support
           </h2>
           <div className="space-y-sm">
@@ -223,7 +223,7 @@ const saveSettings = (key: string, value: boolean | number) => {
                 <p className={getSupportTitleClass('help')}>How to use ParkWise AI</p>
                 <p className="text-label-sm text-on-surface-variant">Learn how to scan and manage parking</p>
               </div>
-              <span className="material-symbols-outlined text-primary">arrow_forward</span>
+              <span className="material-symbols-outlined text-[#D97706]">arrow_forward</span>
             </button>
             <button
               onClick={() => setSelectedSupportAction('contact')}
@@ -233,7 +233,7 @@ const saveSettings = (key: string, value: boolean | number) => {
                 <p className={getSupportTitleClass('contact')}>Contact Support</p>
                 <p className="text-label-sm text-on-surface-variant">Send us feedback or report issues</p>
               </div>
-              <span className="material-symbols-outlined text-primary">arrow_forward</span>
+              <span className="material-symbols-outlined text-[#D97706]">arrow_forward</span>
             </button>
             <button
               onClick={() => setSelectedSupportAction('privacy')}
@@ -243,7 +243,7 @@ const saveSettings = (key: string, value: boolean | number) => {
                 <p className={getSupportTitleClass('privacy')}>Privacy Policy</p>
                 <p className="text-label-sm text-on-surface-variant">View our privacy & terms</p>
               </div>
-              <span className="material-symbols-outlined text-primary">arrow_forward</span>
+              <span className="material-symbols-outlined text-[#D97706]">arrow_forward</span>
             </button>
           </div>
         </section>
@@ -252,8 +252,8 @@ const saveSettings = (key: string, value: boolean | number) => {
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <div className="text-center">
             <div className="flex items-center justify-center gap-xs mb-md">
-              <span className="material-symbols-outlined text-[32px] text-primary">local_parking</span>
-              <h3 className="text-headline-sm font-bold text-on-surface">ParkWise AI</h3>
+              <span className="material-symbols-outlined text-[32px] text-[#D97706]">local_parking</span>
+              <h3 className="text-headline-sm font-bold text-[#D97706]">ParkWise AI</h3>
             </div>
             <p className="text-label-lg text-on-surface-variant mb-xs">Version {appVersion}</p>
             <p className="text-label-sm text-on-surface-variant opacity-70">Smart parking analysis powered by AI</p>

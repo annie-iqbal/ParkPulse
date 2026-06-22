@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 import { getCurrentPosition, checkPublicHoliday } from '../lib/geolocation';
 import { ParkingAnalysis } from '../types';
 import { AppHeader } from '../components/layout/AppHeader';
@@ -12,6 +12,21 @@ interface ScanScreenProps {
 type ScanState = 'idle' | 'captured' | 'locating' | 'analyzing' | 'error';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const ANALYZE_FUNCTION_NAME = 'analyze-parking';
+const MAX_ANALYZE_IMAGE_SIZE = 1600;
+const ANALYZE_IMAGE_QUALITY = 0.82;
+
+interface AnalyzeFunctionResponse {
+  canPark?: boolean;
+  verdict?: string;
+  description?: string;
+  maxDuration?: string | null;
+  until?: string | null;
+  contextCards?: ParkingAnalysis['contextCards'];
+  regulatoryBreakdown?: ParkingAnalysis['regulatoryBreakdown'];
+  rawSignText?: string;
+  error?: string;
+}
 
 async function extractEdgeFunctionError(error: unknown): Promise<string> {
   if (!error) return 'Unknown error';
@@ -34,6 +49,87 @@ async function extractEdgeFunctionError(error: unknown): Promise<string> {
   return err.message ?? 'Edge function call failed.';
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function imageFileToAnalyzePayload(file: File): Promise<{ imageBase64: string; mimeType: string }> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+
+    const scale = Math.min(1, MAX_ANALYZE_IMAGE_SIZE / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Could not prepare image for analysis.');
+    context.drawImage(image, 0, 0, width, height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', ANALYZE_IMAGE_QUALITY);
+    return { imageBase64: dataUrl.split(',')[1], mimeType: 'image/jpeg' };
+  } catch {
+    return { imageBase64: await fileToBase64(file), mimeType: file.type || 'image/jpeg' };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function invokeAnalyzeParking(body: Record<string, unknown>): Promise<AnalyzeFunctionResponse> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase is not configured.\nAdd VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your local environment.');
+  }
+
+  const functionUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/${ANALYZE_FUNCTION_NAME}`;
+  let response: Response;
+
+  try {
+    response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        apikey: supabaseAnonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error(
+      `Could not reach the ${ANALYZE_FUNCTION_NAME} Edge Function.\nDeploy the latest function with: supabase functions deploy ${ANALYZE_FUNCTION_NAME}\nIf it is already deployed, check that VITE_SUPABASE_URL points to the same Supabase project.`
+    );
+  }
+
+  const responseText = await response.text();
+  let data: AnalyzeFunctionResponse = {};
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { error: responseText };
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || `Analyze function failed with HTTP ${response.status}.`);
+  }
+
+  return data;
+}
+
 export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +140,23 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const [errorMessage, setErrorMessage] = useState('');
   const [errorDetail, setErrorDetail] = useState('');
   const [currentLocation, setCurrentLocation] = useState('Getting location...');
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('parkwise_settings');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      setDarkMode(settings.darkMode ?? false);
+    }
+
+    const handleDarkModeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<boolean>;
+      setDarkMode(customEvent.detail);
+    };
+
+    window.addEventListener('darkModeToggled', handleDarkModeChange);
+    return () => window.removeEventListener('darkModeToggled', handleDarkModeChange);
+  }, []);
 
   useEffect(() => {
     // Load current location on mount
@@ -73,18 +186,6 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
     if (uploadInputRef.current) uploadInputRef.current.value = '';
   }
 
-  async function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        resolve(result.split(',')[1]);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
   async function handleAnalyze() {
     if (!capturedFile) return;
     setErrorMessage('');
@@ -111,34 +212,27 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
       setScanState('analyzing');
       setStatusMessage('Reading the sign with AI...');
 
-      const imageBase64 = await fileToBase64(capturedFile);
+      const imagePayload = await imageFileToAnalyzePayload(capturedFile);
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
       const dayStr = DAY_NAMES[now.getDay()];
 
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('analyze-parking', {
-        body: {
-          imageBase64,
-          mimeType: capturedFile.type,
-          currentTime: timeStr,
-          currentDay: dayStr,
-          isPublicHoliday: isHoliday,
-          location: locationStr,
-        },
+      const fnData = await invokeAnalyzeParking({
+        imageBase64: imagePayload.imageBase64,
+        mimeType: imagePayload.mimeType,
+        currentTime: timeStr,
+        currentDay: dayStr,
+        isPublicHoliday: isHoliday,
+        location: locationStr,
       });
 
-      if (fnError) {
-        const detail = await extractEdgeFunctionError(fnError);
-        const isKeyMissing = detail.toLowerCase().includes('openrouter_api_key') || detail.toLowerCase().includes('not configured');
+      if (fnData?.error) {
+        const isKeyMissing = fnData.error.toLowerCase().includes('openrouter_api_key') || fnData.error.toLowerCase().includes('not configured');
         throw new Error(
           isKeyMissing
             ? 'OPENROUTER_API_KEY not configured.\nAdd it in: Supabase Dashboard → Edge Functions → Secrets → New secret'
-            : detail
+            : fnData.error
         );
-      }
-
-      if (fnData?.error) {
-        throw new Error(fnData.error);
       }
 
       const analysis: ParkingAnalysis = {
@@ -157,7 +251,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
       onAnalysisComplete(analysis);
     } catch (err) {
       setScanState('error');
-      const msg = err instanceof Error ? err.message : 'Analysis failed. Please try again.';
+      const msg = err instanceof Error ? await extractEdgeFunctionError(err) : 'Analysis failed. Please try again.';
       const lines = msg.split('\n');
       setErrorMessage(lines[0]);
       setErrorDetail(lines.slice(1).join('\n'));
@@ -171,34 +265,34 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
-    <AppScreenShell>
-      <AppHeader />
+    <AppScreenShell darkMode={darkMode}>
+      <AppHeader darkMode={darkMode} />
 
         <section className="p-5 space-y-4">
       {/* Landing Screen - Idle State */}
       {scanState === 'idle' && (
         <>
           {/* Hero Card */}
-          <div className="bg-primary-fixed-dim rounded-xl p-xl border border-primary-container">
-            <h2 className="text-display-status-mobile font-extrabold text-primary mb-md">Can I Park Here?</h2>
-            <p className="text-body-lg text-on-surface mb-xl">
+          <div className={`rounded-[10px] border px-6 py-7 shadow-sm ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F8F1EC]/80'}`}>
+            <h2 className={`text-[24px] leading-[1.15] font-semibold mb-3 ${darkMode ? 'text-[#ff9800]' : 'text-[#D97706]'}`}>Can I Park Here?</h2>
+            <p className={`text-[15px] leading-[1.45] mb-12 ${darkMode ? 'text-[#d6d0ca]' : 'text-[#5A4A40]'}`}>
               Upload or snap a photo of the nearby parking sign. Our AI engine analyzes local regulations in real-time for instant clarity.
             </p>
 
             {/* Action Buttons */}
-            <div className="space-y-md">
+            <div className="space-y-3">
               <button
                 onClick={() => cameraInputRef.current?.click()}
-                className="w-full bg-primary text-on-primary py-4 rounded-lg flex items-center justify-center gap-md text-headline-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-md"
+                className={`w-full h-[56px] rounded-[8px] text-white flex items-center justify-center gap-3 text-[15px] font-semibold tracking-[0.02em] shadow-[0_8px_14px_rgba(69,26,3,0.18)] active:scale-[0.99] transition-all ${darkMode ? 'bg-[#ff9800] hover:bg-[#E88816]' : 'bg-[#D97706] hover:bg-[#C96A05]'}`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>photo_camera</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24" }}>photo_camera</span>
                 Scan Parking Sign
               </button>
               <button
                 onClick={() => uploadInputRef.current?.click()}
-                className="w-full bg-surface-container-lowest text-on-surface py-4 rounded-lg flex items-center justify-center gap-md text-headline-sm font-semibold hover:bg-surface-container-low active:scale-95 transition-all border border-outline-variant"
+                className={`w-full h-[56px] rounded-[8px] flex items-center justify-center gap-3 text-[15px] font-semibold tracking-[0.02em] border active:scale-[0.99] transition-all ${darkMode ? 'border-[#7A4A12] bg-[#3a2a18] text-[#ffd7a3] hover:bg-[#45311c]' : 'border-[#D9B995] bg-[#F7D9B8] text-[#2A1E17] hover:bg-[#F3CFA5]'}`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>upload_file</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24" }}>upload_file</span>
                 Upload Image
               </button>
             </div>
@@ -207,7 +301,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
           {/* Current Status Card */}
           <div className="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm mt-xs">
             <p className="text-label-sm text-on-surface-variant font-semibold mb-md">Current Status</p>
-            <p className="text-display-status-mobile font-extrabold text-primary mb-xs">{timeStr}</p>
+            <p className="text-display-status-mobile font-extrabold text-[#D97706] mb-xs">{timeStr}</p>
             <p className="text-label-lg text-on-surface-variant mb-lg">{dateStr}</p>
             <div className="flex items-center gap-md pt-lg border-t border-outline-variant">
               <div className="w-10 h-10 rounded-lg bg-primary-fixed-dim flex items-center justify-center flex-shrink-0">
@@ -246,7 +340,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
                   <img
                     src={capturedImage}
                     alt="Captured parking sign"
-                    className="w-full h-48 object-cover"
+                    className="w-full h-[70vh] min-h-[420px] max-h-[720px] object-contain bg-black"
                   />
                   {isProcessing && (
                     <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-md">
@@ -267,7 +361,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
               ) : (
                 <button
                   onClick={() => cameraInputRef.current?.click()}
-                  className="w-full h-48 flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant"
+                  className="w-full h-[70vh] min-h-[420px] max-h-[720px] flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant"
                 >
                   <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-primary" style={{ fontSize: '40px' }}>
@@ -301,12 +395,12 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
 
           {/* Error state */}
           {scanState === 'error' && (
-            <div className="bg-error-container border border-error/30 rounded-xl p-md flex items-start gap-md mb-lg">
+            <div className="bg-error-container border border-error/30 rounded-xl p-md flex items-start gap-md mb-lg max-h-[220px] overflow-hidden">
               <span className="material-symbols-outlined text-on-error-container mt-0.5 flex-shrink-0">error</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-label-lg font-semibold text-on-error-container">{errorMessage}</p>
+              <div className="flex-1 min-w-0 max-h-[180px] overflow-y-auto overscroll-contain pr-2">
+                <p className="text-label-lg font-semibold text-on-error-container break-words">{errorMessage}</p>
                 {errorDetail && (
-                  <p className="text-label-sm text-on-error-container/80 mt-xs whitespace-pre-line">{errorDetail}</p>
+                  <p className="text-label-sm text-on-error-container/80 mt-xs whitespace-pre-line break-words">{errorDetail}</p>
                 )}
               </div>
             </div>
@@ -317,10 +411,10 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
             <button
               onClick={handleAnalyze}
               disabled={isProcessing}
-              className="w-full bg-primary py-4 rounded-lg flex items-center justify-center gap-md text-on-primary text-headline-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-lg disabled:opacity-70"
+              className="w-full h-[50px] rounded-[10px] bg-[#D97706] text-white text-[15px] font-semibold flex items-center justify-center gap-2 shadow-[0_8px_18px_rgba(69,26,3,0.22)] active:scale-[0.99] transition-transform tracking-[0.02em] disabled:opacity-50"
             >
-              <span className="material-symbols-outlined">search</span>
               {scanState === 'error' ? 'Try Again' : 'Analyze Sign'}
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_right</span>
             </button>
           )}
         </>

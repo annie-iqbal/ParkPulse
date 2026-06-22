@@ -48,7 +48,7 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
     return (
       <button
         onClick={onClick}
-        className="flex flex-col items-center justify-center text-primary active:scale-90 transition-all duration-200 min-w-[72px] py-1"
+        className="flex flex-col items-center justify-center text-[#D97706] active:scale-90 transition-all duration-200 min-w-[72px] py-1"
       >
         <span
           className="material-symbols-outlined text-[22px]"
@@ -64,7 +64,7 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary active:scale-90 transition-all duration-200 min-w-[72px] py-1"
+      className="flex flex-col items-center justify-center text-on-surface-variant hover:text-[#D97706] active:scale-90 transition-all duration-200 min-w-[72px] py-1"
     >
       <span className="material-symbols-outlined text-[22px]">{icon}</span>
       <span className="text-label-sm font-medium mt-0.5">{label}</span>

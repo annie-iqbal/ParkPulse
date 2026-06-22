@@ -505,42 +505,47 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
                 </p>
               </div>
 
-              <div className="rounded-[10px] border border-[#CDBFB4] overflow-hidden bg-[#F7F4F1]">
+              <div className={`rounded-[10px] border overflow-hidden ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F7F4F1]'}`}>
                 <div className="p-3 pb-0">
                   <span className="inline-flex items-center gap-1.5 bg-[#D97706] text-white text-[11px] font-semibold px-3 py-1 rounded-full">
                     ◎ Live Location
                   </span>
                 </div>
 
-                <div className="relative m-3 mt-2 h-[248px] rounded-[10px] overflow-hidden bg-gradient-to-br from-[#E8F0F8] to-[#D0E0F0]">
+                <div className={`relative m-3 mt-2 h-[248px] rounded-[10px] overflow-hidden ${darkMode ? 'bg-gradient-to-br from-[#202832] to-[#111827]' : 'bg-gradient-to-br from-[#E8F0F8] to-[#D0E0F0]'}`}>
                   {liveMapEmbedUrl ? (
-                    <iframe
-                      title="Live parking location map"
-                      width="100%"
-                      height="100%"
-                      frameBorder="0"
-                      src={liveMapEmbedUrl}
-                      className="absolute inset-0"
-                    />
+                    <>
+                      <iframe
+                        title="Live parking location map"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        src={liveMapEmbedUrl}
+                        className={`absolute inset-0 ${darkMode ? 'brightness-[0.72] contrast-[1.12] saturate-[0.75]' : ''}`}
+                      />
+                      {darkMode && <div className="absolute inset-0 bg-[#101820]/20 pointer-events-none" />}
+                    </>
                   ) : (
                     <>
                       <div className="absolute inset-0 opacity-50" style={{
                         backgroundImage:
-                          'linear-gradient(0deg, rgba(200,200,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(200,200,200,0.3) 1px, transparent 1px)',
+                          darkMode
+                            ? 'linear-gradient(0deg, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)'
+                            : 'linear-gradient(0deg, rgba(200,200,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(200,200,200,0.3) 1px, transparent 1px)',
                         backgroundSize: '40px 40px',
                       }} />
-                      <div className="absolute inset-0 grid place-items-center px-5 text-center text-[14px] font-semibold text-[#6C5D54]">
+                      <div className={`absolute inset-0 grid place-items-center px-5 text-center text-[14px] font-semibold ${darkMode ? 'text-[#d6d0ca]' : 'text-[#6C5D54]'}`}>
                         {locationState === 'loading' ? 'Loading live map...' : 'Location map unavailable'}
                       </div>
                     </>
                   )}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#D97706] border-2 border-white shadow-lg pointer-events-none" />
+                  <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#D97706] border-2 shadow-lg pointer-events-none ${darkMode ? 'border-[#242424] shadow-[0_0_0_4px_rgba(217,119,6,0.22),0_12px_22px_rgba(0,0,0,0.35)]' : 'border-white'}`} />
                 </div>
 
                 <div className="px-4 pb-4">
                   <div>
                     <p className="text-[11px] font-semibold text-[#D97706]">Detected Address</p>
-                    <p className="text-[17px] font-semibold leading-tight text-[#2A1E17] mt-0.5">
+                    <p className={`text-[17px] font-semibold leading-tight mt-0.5 ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>
                       {locationState === 'loading' ? 'Detecting your address...' : address}
                     </p>
                   </div>
@@ -551,7 +556,7 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
 
           {isOfflineMode && (
             <div className={`rounded-[10px] border p-5 text-center ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F5F1EE]'}`}>
-              <div className={`w-20 h-20 rounded-xl shadow-sm mx-auto grid place-items-center mb-4 ${darkMode ? 'bg-[#333] text-[#ffb84d]' : 'bg-white text-[#8D4F00]'}`}>
+              <div className={`w-20 h-20 rounded-xl shadow-sm mx-auto grid place-items-center mb-4 ${darkMode ? 'bg-[#333] text-[#D97706]' : 'bg-white text-[#D97706]'}`}>
                 <CircleOff size={34} />
               </div>
               <h3 className={`text-[38px] leading-tight font-semibold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>GPS Unavailable</h3>
@@ -580,12 +585,12 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
             <div>
               <div className="flex items-center justify-between gap-3">
                 <div className={`flex items-center gap-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
-                  <CircleDollarSign size={18} className={darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'} />
+                  <CircleDollarSign size={18} className="text-[#D97706]" />
                   <span className="text-[13px] font-semibold">Is Paid</span>
                 </div>
                 <button
                   onClick={() => setIsPaid((value) => !value)}
-                  className={`relative shrink-0 w-[54px] h-[30px] rounded-full transition-colors ${isPaid ? 'bg-[#C46905]' : 'bg-[#C8BDB5]'}`}
+                  className={`relative shrink-0 w-[54px] h-[30px] rounded-full transition-colors ${isPaid ? 'bg-[#D97706]' : darkMode ? 'bg-[#555]' : 'bg-[#C8BDB5]'}`}
                   aria-pressed={isPaid}
                   aria-label="Toggle paid status"
                 >
@@ -594,7 +599,7 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
               </div>
               {isPaid && (
                 <div className={`mt-2 h-11 rounded-[8px] border px-3 flex items-center gap-2 ${darkMode ? 'border-[#444] bg-[#333]' : 'border-[#D3C5BB] bg-[#F6F1EE]'}`}>
-                  <span className={`font-bold ${darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'}`}>$</span>
+                  <span className="font-bold text-[#D97706]">$</span>
                   <input
                     value={paymentDueInput}
                     onChange={(event) => setPaymentDueInput(event.target.value.replace(/[^0-9.]/g, ''))}
@@ -628,7 +633,7 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
                   </option>
                 ))}
                 </select>
-                <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[14px] ${darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'}`}>⌄</span>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[#D97706]">⌄</span>
               </div>
               <p className={`mt-2 text-[12px] ${darkMode ? 'text-[#777]' : 'text-[#6C5D54]'}`}>
                 Select how long this parking session should run.
@@ -645,29 +650,29 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
               <>
                 {isOfflineMode ? (
                   <>
-                    <div className="rounded-[8px] border border-dashed border-[#9C7E69] h-[102px] grid place-items-center text-[#7A5D49]">
+                    <div className={`rounded-[8px] border border-dashed h-[102px] grid place-items-center ${darkMode ? 'border-[#666] text-[#d6d0ca] bg-[#242424]' : 'border-[#9C7E69] text-[#7A5D49]'}`}>
                       <div className="text-center">
                         <Camera size={24} className="mx-auto mb-2" />
                         <p className="text-[14px] font-medium">Capture spot landmark</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-3">
-                      <button onClick={handleTakePhoto} className="h-10 rounded-md bg-[#A25E00] text-white text-[14px] font-semibold flex items-center justify-center gap-2 hover:bg-[#8A4A00] transition-colors">
+                      <button onClick={handleTakePhoto} className="h-10 rounded-md bg-[#D97706] text-white text-[14px] font-semibold flex items-center justify-center gap-2 hover:bg-[#C96A05] transition-colors">
                         <Camera size={16} /> Take Photo
                       </button>
-                      <button onClick={() => fileInputRef.current?.click()} className="h-10 rounded-md border border-[#B9A79A] text-[#2A1E17] text-[14px] font-semibold flex items-center justify-center gap-2 bg-white/80 hover:bg-white transition-colors">
+                      <button onClick={() => fileInputRef.current?.click()} className={`h-10 rounded-md border text-[14px] font-semibold flex items-center justify-center gap-2 transition-colors ${darkMode ? 'border-[#7A4A12] bg-[#3a2a18] text-[#ffd7a3] hover:bg-[#45311c]' : 'border-[#B9A79A] bg-white/80 text-[#2A1E17] hover:bg-white'}`}>
                         <Upload size={16} /> Upload
                       </button>
                     </div>
                   </>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={handleTakePhoto} className="h-[108px] rounded-[10px] border border-dashed border-[#C9B8AC] bg-[#F8F4F0] flex flex-col items-center justify-center gap-2 text-[#2A1E17] hover:bg-[#EDE7E0] transition-colors">
-                      <Camera size={28} className="text-[#D97706]" />
+                    <button onClick={handleTakePhoto} className={`h-[108px] rounded-[10px] border border-dashed flex flex-col items-center justify-center gap-2 transition-colors ${darkMode ? 'border-[#666] bg-[#242424] text-[#e0e0e0] hover:bg-[#303030]' : 'border-[#C9B8AC] bg-[#F8F4F0] text-[#2A1E17] hover:bg-[#EDE7E0]'}`}>
+                      <Camera size={28} className={darkMode ? 'text-[#ff9800]' : 'text-[#D97706]'} />
                       <span className="text-[14px] font-semibold">Take Photo</span>
                     </button>
-                    <button onClick={() => fileInputRef.current?.click()} className="h-[108px] rounded-[10px] border border-dashed border-[#C9B8AC] bg-[#F8F4F0] flex flex-col items-center justify-center gap-2 text-[#2A1E17] hover:bg-[#EDE7E0] transition-colors">
-                      <Upload size={28} className="text-[#D97706]" />
+                    <button onClick={() => fileInputRef.current?.click()} className={`h-[108px] rounded-[10px] border border-dashed flex flex-col items-center justify-center gap-2 transition-colors ${darkMode ? 'border-[#666] bg-[#242424] text-[#e0e0e0] hover:bg-[#303030]' : 'border-[#C9B8AC] bg-[#F8F4F0] text-[#2A1E17] hover:bg-[#EDE7E0]'}`}>
+                      <Upload size={28} className={darkMode ? 'text-[#ff9800]' : 'text-[#D97706]'} />
                       <span className="text-[14px] font-semibold">Upload</span>
                     </button>
                   </div>

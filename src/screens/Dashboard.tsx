@@ -68,8 +68,27 @@ function toPublicImageUrl(url: string): string {
   return url;
 }
 
+function extractParkingLevel(description?: string | null): string | null {
+  if (!description) return null;
+
+  const levelMatch = description.match(/\b(level|lvl|floor|fl)\s*[:#-]?\s*([a-z]?\d+[a-z]?|\d+[a-z]?|[a-z])\b/i);
+  if (levelMatch) {
+    const label = levelMatch[1].toLowerCase().startsWith('f') ? 'Floor' : 'Level';
+    return `${label} ${levelMatch[2].toUpperCase()}`;
+  }
+
+  const sectionMatch = description.match(/\b(section|zone|area)\s*[:#-]?\s*([a-z]?\d+[a-z]?|\d+[a-z]?|[a-z])\b/i);
+  if (sectionMatch) {
+    const label = sectionMatch[1][0].toUpperCase() + sectionMatch[1].slice(1).toLowerCase();
+    return `${label} ${sectionMatch[2].toUpperCase()}`;
+  }
+
+  return null;
+}
+
 const HISTORY_PAGE_SIZE = 10;
 const WALKING_SPEED_METERS_PER_SECOND = 1.4;
+const LIVE_POSITION_UPDATE_THRESHOLD_METERS = 30;
 const LAST_POSITION_STORAGE_KEY = 'parkpulse:last-position';
 
 type LivePosition = {
@@ -89,10 +108,31 @@ function getDistanceMeters(start: LivePosition, end: LivePosition): number {
 
 function formatWalkDistance(distanceMeters: number): string {
   if (distanceMeters < 1000) {
-    return `${Math.round(distanceMeters)}m`;
+    const roundedMeters = Math.round(distanceMeters / 10) * 10;
+    return roundedMeters < 10 ? '<10 m' : `${roundedMeters} m`;
   }
 
-  return `${(distanceMeters / 1000).toFixed(1)}km`;
+  return `${(distanceMeters / 1000).toFixed(1)} km`;
+}
+
+function formatWalkDuration(minutes: number): string {
+  return `${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
+}
+
+function getParkingReminderMessage(minutesLeft: number, isExpired: boolean): string {
+  if (isExpired) {
+    return 'Parking time has ended. You may be over the allowed time; extra charges or a fine may apply.';
+  }
+
+  if (minutesLeft < 1) {
+    return 'Less than 1 min left. Parking time is almost over; move or extend now to avoid extra charges or a fine.';
+  }
+
+  return `${formatWalkDuration(minutesLeft)} left. Parking time is almost over; move or extend soon to avoid extra charges or a fine.`;
+}
+
+function shouldUpdateLivePosition(currentPosition: LivePosition | null, nextPosition: LivePosition): boolean {
+  return !currentPosition || getDistanceMeters(currentPosition, nextPosition) >= LIVE_POSITION_UPDATE_THRESHOLD_METERS;
 }
 
 function getCachedLivePosition(): LivePosition | null {
@@ -160,7 +200,6 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
   const [fullImageUrl, setFullImageUrl] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const lastRoutePositionRef = useRef<LivePosition | null>(null);
-  const lastRouteUpdateRef = useRef(0);
   const navigationHistoryPushedRef = useRef(false);
 
   // Load dark mode setting on mount
@@ -259,6 +298,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
     const cachedPosition = getCachedLivePosition();
     if (cachedPosition) {
       setLivePosition(cachedPosition);
+      lastRoutePositionRef.current = cachedPosition;
       setNavigationStatus('Using recent location while refreshing GPS');
     }
 
@@ -268,15 +308,17 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
     }
 
     setNavigationStatus('Updating from your live location...');
-    lastRoutePositionRef.current = null;
-    lastRouteUpdateRef.current = 0;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
+        if (!shouldUpdateLivePosition(lastRoutePositionRef.current, currentPosition)) {
+          setNavigationStatus('Using stable location; ignoring small GPS drift');
+          return;
+        }
+
         cacheLivePosition(currentPosition);
         lastRoutePositionRef.current = currentPosition;
-        lastRouteUpdateRef.current = Date.now();
         setLivePosition(currentPosition);
         setNavigationStatus('Live route updated from your current location');
       },
@@ -292,18 +334,15 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
       (position) => {
         const nextPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
         const lastPosition = lastRoutePositionRef.current;
-        const now = Date.now();
-        const movedEnough = !lastPosition || getDistanceMeters(lastPosition, nextPosition) >= 25;
-        const waitedEnough = now - lastRouteUpdateRef.current >= 15000;
+        const movedEnough = shouldUpdateLivePosition(lastPosition, nextPosition);
 
-        if (movedEnough || waitedEnough) {
+        if (movedEnough) {
           cacheLivePosition(nextPosition);
           lastRoutePositionRef.current = nextPosition;
-          lastRouteUpdateRef.current = now;
           setLivePosition(nextPosition);
           setNavigationStatus('Live route updated from your current location');
         } else {
-          setNavigationStatus('Tracking movement without reloading the map');
+          setNavigationStatus('Using stable location; ignoring small GPS drift');
         }
       },
       () => {
@@ -343,6 +382,29 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
     setLivePosition(null);
     setNavigationStatus('Waiting for live location...');
   }
+
+  function closeFullImageViewer() {
+    setFullImageUrl(null);
+  }
+
+  useEffect(() => {
+    if (!fullImageUrl) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeFullImageViewer();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [fullImageUrl]);
 
   async function fetchNextHistoryPage() {
     if (isLoadingMoreHistory || !hasMoreHistory) return;
@@ -389,15 +451,15 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
   }
 
   const isParked = Boolean(activeSession);
-  const paymentDue = activeSession?.payment_due ?? 2.5;
   const minutesLeft = Math.max(0, Math.floor(remainingMs / 60000));
+  const isParkingExpired = Boolean(activeSession && remainingMs <= 0);
+  const reminderMessage = getParkingReminderMessage(minutesLeft, isParkingExpired);
   const reminderSettings = getReminderSettings();
   const shouldShowReminder = Boolean(
     activeSession &&
     activeSession.reminder_enabled &&
     reminderSettings.enabled &&
-    remainingMs > 0 &&
-    remainingMs <= reminderSettings.leadMinutes * 60 * 1000 &&
+    (isParkingExpired || (remainingMs > 0 && remainingMs <= reminderSettings.leadMinutes * 60 * 1000)) &&
     dismissedReminderSessionId !== activeSession.id
   );
 
@@ -407,8 +469,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
     setNotifiedReminderSessionId(activeSession.id);
 
     if (document.visibilityState !== 'visible' && 'Notification' in window) {
-      const paymentText = paymentDue > 0 ? `Payment due: $${paymentDue.toFixed(2)}` : 'Free parking';
-      const body = `${minutesLeft} mins left. ${paymentText}`;
+      const body = reminderMessage;
       if (Notification.permission === 'granted') {
         new Notification('Parking reminder', { body });
       } else if (Notification.permission === 'default') {
@@ -419,7 +480,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
         });
       }
     }
-  }, [activeSession, shouldShowReminder, notifiedReminderSessionId, minutesLeft, paymentDue]);
+  }, [activeSession, shouldShowReminder, notifiedReminderSessionId, reminderMessage]);
 
   const parkingMapUrl = useMemo(() => {
     if (!activeSession) return null;
@@ -455,6 +516,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
 
   const activeMapUrl = showNavigationMap ? navigationMapUrl : parkingMapUrl;
   const activeVisualReferenceUrl = activeSession?.image_url ? toPublicImageUrl(activeSession.image_url) : null;
+  const parkingLevelLabel = useMemo(() => extractParkingLevel(activeSession?.spot_note), [activeSession?.spot_note]);
   const parkedPosition = useMemo(() => {
     if (typeof activeSession?.lat !== 'number' || typeof activeSession?.lng !== 'number') return null;
     return { lat: activeSession.lat, lng: activeSession.lng };
@@ -464,9 +526,11 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
     if (!livePosition) return 'Getting GPS...';
 
     const distanceMeters = getDistanceMeters(livePosition, parkedPosition);
-    const walkMinutes = Math.max(1, Math.ceil(distanceMeters / WALKING_SPEED_METERS_PER_SECOND / 60));
-    return `${walkMinutes} min • ${formatWalkDistance(distanceMeters)}`;
+    const displayDistanceMeters = distanceMeters < 1000 ? Math.round(distanceMeters / 10) * 10 : distanceMeters;
+    const walkMinutes = Math.max(1, Math.ceil(displayDistanceMeters / WALKING_SPEED_METERS_PER_SECOND / 60));
+    return `${formatWalkDuration(walkMinutes)} • ${formatWalkDistance(distanceMeters)}`;
   }, [livePosition, parkedPosition]);
+  const isEstimatedWalkStatus = estimatedWalkText === 'Location saved' || estimatedWalkText === 'Getting GPS...';
 
   const displayedHistoryItems = showAllHistory ? historyItems : historyItems.slice(0, 3);
 
@@ -505,7 +569,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
               <div className="rounded-[10px] bg-[#D97706] text-white px-4 py-3 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2">
                   <Bell size={16} className="mt-0.5" />
-                  <p className="text-[14px] font-semibold leading-tight">Reminder: {minutesLeft} mins left! (Payment due: ${paymentDue.toFixed(2)})</p>
+                  <p className="text-[14px] font-semibold leading-tight">{reminderMessage}</p>
                 </div>
                 <button
                   onClick={() => activeSession && setDismissedReminderSessionId(activeSession.id)}
@@ -525,7 +589,7 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
                     </span>
                     <div>
                       <p className={`text-[11px] font-semibold ${darkMode ? 'text-[#ffb84d]' : 'text-[#B66206]'}`}>Estimated Walk</p>
-                      <p className={`text-[16px] leading-none font-semibold ${darkMode ? 'text-[#ddd]' : 'text-[#251C18]'}`}>{estimatedWalkText}</p>
+                      <p className={`${isEstimatedWalkStatus ? 'text-[13px]' : 'text-[16px]'} leading-none font-semibold ${darkMode ? 'text-[#ddd]' : 'text-[#251C18]'}`}>{estimatedWalkText}</p>
                     </div>
                   </div>
                   <button
@@ -577,7 +641,11 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
               <div className={`rounded-[10px] border ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBEB2] bg-[#F8F5F2]'} p-4`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className={`text-[18px] font-semibold ${darkMode ? 'text-[#e0e0e0]' : 'text-[#2A1E17]'}`}>Parking Location</h4>
-                  <span className={`rounded-full ${darkMode ? 'bg-[#664D00] text-[#ffb84d]' : 'bg-[#F4D5A8] text-[#A95E05]'} px-2.5 py-1 text-[10px] font-semibold`}>Level 3B</span>
+                  {parkingLevelLabel && (
+                    <span className={`rounded-full ${darkMode ? 'bg-[#664D00] text-[#ffb84d]' : 'bg-[#F4D5A8] text-[#A95E05]'} px-2.5 py-1 text-[10px] font-semibold`}>
+                      {parkingLevelLabel}
+                    </span>
+                  )}
                 </div>
                 <p className={`text-[14px] ${darkMode ? 'text-[#999]' : 'text-[#514139]'} flex items-center gap-1.5`}><LocateFixed size={14} className="text-[#D97706]" /> {activeSession?.location ?? 'Saved parking location'}</p>
                 <p className={`mt-2 text-[13px] ${darkMode ? 'text-[#777]' : 'text-[#6B5A51]'} flex items-center gap-1.5`}>
@@ -600,7 +668,14 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
                     </button>
                   </div>
                   <div className="rounded-[10px] border border-[#CDBEB2] overflow-hidden">
-                    <img src={activeVisualReferenceUrl} alt="Parking spot visual reference" className="w-full h-[160px] object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setFullImageUrl(activeVisualReferenceUrl)}
+                      className="block w-full text-left"
+                      aria-label="Open visual reference full screen"
+                    >
+                      <img src={activeVisualReferenceUrl} alt="Parking spot visual reference" className="w-full h-[160px] object-cover" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -785,16 +860,26 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
 
       {fullImageUrl && (
         <div
-          onClick={() => setFullImageUrl(null)}
-          className="fixed inset-0 z-50 bg-black flex items-center justify-center cursor-zoom-out"
+          onClick={closeFullImageViewer}
+          className="fixed left-0 top-0 z-[2147483647] h-dvh w-screen bg-black flex items-center justify-center cursor-zoom-out p-0"
           role="dialog"
           aria-modal="true"
           aria-label="Full visual reference"
         >
-          <img src={fullImageUrl} alt="Full parking spot visual reference" className="w-screen h-screen object-contain" />
-          <span className="absolute right-4 top-4 w-10 h-10 rounded-full bg-black/55 text-white text-[28px] leading-none grid place-items-center pointer-events-none">
+          <img
+            src={fullImageUrl}
+            alt="Full parking spot visual reference"
+            className="h-full w-full object-cover object-center"
+            onClick={(event) => event.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={closeFullImageViewer}
+            className="absolute right-4 top-4 w-11 h-11 rounded-full bg-black/75 text-white text-[30px] leading-none grid place-items-center shadow-xl border border-white/20"
+            aria-label="Close full screen image"
+          >
             ×
-          </span>
+          </button>
         </div>
       )}
     </AppScreenShell>
