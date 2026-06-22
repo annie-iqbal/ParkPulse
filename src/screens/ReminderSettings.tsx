@@ -32,7 +32,7 @@ export function ReminderSettingsScreen({ onBack, onHomeClick, onParkClick, onChe
 
   return (
     <main className="flex-grow w-full max-w-[600px] mx-auto px-3 sm:px-4 pt-3 pb-20 bg-[#EEE8E2]">
-      <div className="mx-auto w-full max-w-[540px] min-h-[860px] rounded-[20px] border border-[#D6CBC2] bg-[#F8F1EC] shadow-[0_4px_22px_rgba(28,25,23,0.12)] overflow-hidden flex flex-col">
+      <div className="mx-auto w-full max-w-[540px] min-h-[860px] bg-[#F8F1EC] flex flex-col">
         <header className="h-[64px] px-4 border-b border-[#D7CCC2] flex items-center justify-between bg-[#FFF7F0]">
           <div className="flex items-center gap-3 text-[#9A4D00]">
             <button onClick={onBack} className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#F4E5D8] transition-colors">
@@ -45,7 +45,7 @@ export function ReminderSettingsScreen({ onBack, onHomeClick, onParkClick, onChe
 
         <section className="flex-1 p-5 space-y-5">
           <p className="text-[15px] leading-[1.45] text-[#3B302A]">
-            Customize how and when ParkPulse notifies you about your parking sessions and payments.
+            Customize how and when ParkWise AI notifies you about your parking sessions and payments.
           </p>
 
           <div className="rounded-[10px] border border-[#E2B995] bg-[#FFF7F0] p-4 flex items-center justify-between gap-3">

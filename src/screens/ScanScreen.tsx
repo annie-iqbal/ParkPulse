@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { getCurrentPosition, checkPublicHoliday } from '../lib/geolocation';
 import { ParkingAnalysis } from '../types';
+import { AppHeader } from '../components/layout/AppHeader';
+import { AppScreenShell } from '../components/layout/AppScreenShell';
 
 interface ScanScreenProps {
   onAnalysisComplete: (analysis: ParkingAnalysis) => void;
@@ -169,7 +171,10 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-20 pt-xs flex flex-col">
+    <AppScreenShell>
+      <AppHeader />
+
+        <section className="p-5 space-y-4">
       {/* Landing Screen - Idle State */}
       {scanState === 'idle' && (
         <>
@@ -201,7 +206,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
 
           {/* Current Status Card */}
           <div className="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm mt-xs">
-            <p className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold mb-md">Current Status</p>
+            <p className="text-label-sm text-on-surface-variant font-semibold mb-md">Current Status</p>
             <p className="text-display-status-mobile font-extrabold text-primary mb-xs">{timeStr}</p>
             <p className="text-label-lg text-on-surface-variant mb-lg">{dateStr}</p>
             <div className="flex items-center gap-md pt-lg border-t border-outline-variant">
@@ -261,7 +266,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
                 </div>
               ) : (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => cameraInputRef.current?.click()}
                   className="w-full h-48 flex flex-col items-center justify-center gap-md bg-surface-container-low hover:bg-surface-container transition-colors border-2 border-dashed border-outline-variant"
                 >
                   <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -320,6 +325,7 @@ export function ScanScreen({ onAnalysisComplete }: ScanScreenProps) {
           )}
         </>
       )}
-    </main>
+        </section>
+    </AppScreenShell>
   );
 }

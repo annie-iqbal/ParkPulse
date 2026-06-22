@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 import { getReminderSettings, saveReminderSettings } from '../lib/reminderSettings';
+import { AppHeader } from '../components/layout/AppHeader';
+import { AppScreenShell } from '../components/layout/AppScreenShell';
 
 interface SettingsScreenProps {
   showHelp?: () => void;
 }
 
 const TIMING_OPTIONS = [5, 10, 15, 20];
+type SupportAction = 'help' | 'contact' | 'privacy';
 
 export function SettingsScreen({ showHelp }: SettingsScreenProps) {
   const [appVersion] = useState('1.0.0');
@@ -14,6 +16,7 @@ export function SettingsScreen({ showHelp }: SettingsScreenProps) {
   const [reminderLeadMinutes, setReminderLeadMinutes] = useState(5);
   const [locationTracking, setLocationTracking] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [selectedSupportAction, setSelectedSupportAction] = useState<SupportAction | null>(null);
 
   useEffect(() => {
     // Load user preferences from localStorage
@@ -76,16 +79,32 @@ const saveSettings = (key: string, value: boolean | number) => {
     window.dispatchEvent(event);
   };
 
-  return (
-    <main className="flex-grow w-full max-w-[600px] mx-auto px-margin-mobile pb-32 pt-lg">
-      {/* Header */}
-      <section className="mb-xl">
-        <h1 className="text-display-status-mobile font-extrabold text-on-surface">Settings</h1>
-        <p className="text-body-lg text-on-surface-variant">Manage your ParkWise AI preferences</p>
-      </section>
+  const getSupportButtonClass = (action: SupportAction) => {
+    const isSelected = selectedSupportAction === action;
+    return `w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between ${
+      isSelected ? 'border-2 border-primary' : 'border border-outline-variant'
+    }`;
+  };
 
-      {/* Settings Sections */}
-      <div className="space-y-lg">
+  const getSupportTitleClass = (action: SupportAction) => (
+    `text-label-lg font-semibold ${selectedSupportAction === action ? 'text-primary' : 'text-on-surface'}`
+  );
+
+  return (
+    <AppScreenShell darkMode={darkMode}>
+      <AppHeader darkMode={darkMode} />
+
+        <section className="p-5 pb-28">
+          {/* Header */}
+          <section className="mb-xl">
+            <h1 className={`text-[38px] font-semibold leading-[1.05] ${darkMode ? 'text-[#e0e0e0]' : 'text-[#271E1B]'}`}>Settings</h1>
+            <p className={`mt-2 text-[15px] leading-[1.35] ${darkMode ? 'text-[#aaa]' : 'text-[#5F514A]'}`}>
+              Manage your ParkWise AI preferences.
+            </p>
+          </section>
+
+          {/* Settings Sections */}
+          <div className="space-y-lg">
         {/* Notifications Section */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
           <h2 className="text-headline-sm font-bold text-on-surface mb-md flex items-center gap-sm">
@@ -194,25 +213,34 @@ const saveSettings = (key: string, value: boolean | number) => {
           </h2>
           <div className="space-y-sm">
             <button
-              onClick={() => showHelp?.()}
-              className="w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between border border-outline-variant"
+              onClick={() => {
+                setSelectedSupportAction('help');
+                showHelp?.();
+              }}
+              className={getSupportButtonClass('help')}
             >
               <div>
-                <p className="text-label-lg font-semibold text-on-surface">How to use ParkWise AI</p>
+                <p className={getSupportTitleClass('help')}>How to use ParkWise AI</p>
                 <p className="text-label-sm text-on-surface-variant">Learn how to scan and manage parking</p>
               </div>
               <span className="material-symbols-outlined text-primary">arrow_forward</span>
             </button>
-            <button className="w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between border-2 border-primary">
+            <button
+              onClick={() => setSelectedSupportAction('contact')}
+              className={getSupportButtonClass('contact')}
+            >
               <div>
-                <p className="text-label-lg font-semibold text-primary">Contact Support</p>
+                <p className={getSupportTitleClass('contact')}>Contact Support</p>
                 <p className="text-label-sm text-on-surface-variant">Send us feedback or report issues</p>
               </div>
               <span className="material-symbols-outlined text-primary">arrow_forward</span>
             </button>
-            <button className="w-full text-left py-md px-lg rounded-lg bg-surface-container hover:bg-surface transition-colors flex items-center justify-between border border-outline-variant">
+            <button
+              onClick={() => setSelectedSupportAction('privacy')}
+              className={getSupportButtonClass('privacy')}
+            >
               <div>
-                <p className="text-label-lg font-semibold text-on-surface">Privacy Policy</p>
+                <p className={getSupportTitleClass('privacy')}>Privacy Policy</p>
                 <p className="text-label-sm text-on-surface-variant">View our privacy & terms</p>
               </div>
               <span className="material-symbols-outlined text-primary">arrow_forward</span>
@@ -231,7 +259,8 @@ const saveSettings = (key: string, value: boolean | number) => {
             <p className="text-label-sm text-on-surface-variant opacity-70">Smart parking analysis powered by AI</p>
           </div>
         </section>
-      </div>
-    </main>
+          </div>
+        </section>
+    </AppScreenShell>
   );
 }

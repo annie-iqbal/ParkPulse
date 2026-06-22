@@ -24,7 +24,7 @@ export default function App() {
   });
   const [screen, setScreen] = useState<Screen>({ name: 'dashboard' });
   const [showHelp, setShowHelp] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [, setDarkMode] = useState(false);
 
   // Initialize screen based on loaded activeTab on mount
   useEffect(() => {
@@ -145,7 +145,11 @@ return (
 
       {screen.name === 'mark-spot' && (
         <MarkSpotScreen
-          onConfirm={(sessionId: string) => {
+          onHomeClick={() => handleTabChange('home')}
+          onParkClick={() => handleTabChange('park')}
+          onCheckClick={() => handleTabChange('check')}
+          onSettingsClick={() => handleTabChange('settings')}
+          onConfirm={() => {
             setScreen({ name: 'dashboard' });
             setActiveTab('home');
           }}

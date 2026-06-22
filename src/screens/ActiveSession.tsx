@@ -104,8 +104,8 @@ export function ActiveSession({ sessionId, onStopSession }: ActiveSessionProps) 
               </span>
             </div>
           </div>
-          <div className="bg-primary text-on-primary px-md py-xs rounded-full text-label-sm font-semibold tracking-wider">
-            PARKED
+          <div className="bg-primary text-on-primary px-md py-xs rounded-full text-label-sm font-semibold">
+            Parked
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export function ActiveSession({ sessionId, onStopSession }: ActiveSessionProps) 
               <span className="block text-on-surface font-extrabold" style={{ fontSize: '44px', lineHeight: '48px', letterSpacing: '-0.02em' }}>
                 {formatTime(remainingMs)}
               </span>
-              <span className="text-label-lg text-on-surface-variant uppercase tracking-widest">Remaining</span>
+              <span className="text-label-lg text-on-surface-variant">Remaining</span>
             </div>
           </div>
         </div>

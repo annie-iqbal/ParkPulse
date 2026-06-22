@@ -77,7 +77,7 @@ export function AnalysisResult({ analysis }: AnalysisResultProps) {
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg shadow-sm md:col-span-1">
           <div className="flex items-start justify-between mb-lg">
             <div>
-              <p className="text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs font-semibold">Zone Regulations</p>
+              <p className="text-label-sm text-on-surface-variant mb-xs font-semibold">Zone Regulations</p>
               <h3 className="text-headline-md font-bold text-on-surface">
                 {analysis.maxDuration || 'No Limit'}
               </h3>
@@ -121,7 +121,7 @@ export function AnalysisResult({ analysis }: AnalysisResultProps) {
             <span className="material-symbols-outlined text-primary" style={{ fontSize: '24px' }}>location_on</span>
           </div>
           <div>
-            <p className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold mb-xs">Current Area</p>
+            <p className="text-label-sm text-on-surface-variant font-semibold mb-xs">Current Area</p>
             <h4 className="text-headline-sm font-bold text-on-surface">{analysis.location}</h4>
           </div>
         </div>

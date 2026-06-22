@@ -11,9 +11,15 @@ import {
 import { getCurrentPosition } from '../lib/geolocation';
 import { supabase } from '../lib/supabase';
 import { getReminderSettings } from '../lib/reminderSettings';
+import { AppHeader } from '../components/layout/AppHeader';
+import { AppScreenShell } from '../components/layout/AppScreenShell';
 
 interface MarkSpotScreenProps {
   onConfirm?: (sessionId: string) => void;
+  onHomeClick?: () => void;
+  onParkClick?: () => void;
+  onCheckClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
 type LocationState = 'loading' | 'ready' | 'offline';
@@ -43,7 +49,7 @@ function buildOpenStreetMapEmbedUrl(lat: number, lng: number): string {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${(lng - 0.005).toFixed(4)},${(lat - 0.005).toFixed(4)},${(lng + 0.005).toFixed(4)},${(lat + 0.005).toFixed(4)}&layer=mapnik&marker=${lat},${lng}`;
 }
 
-export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
+export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckClick, onSettingsClick }: MarkSpotScreenProps) {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [locationState, setLocationState] = useState<LocationState>('loading');
   const [address, setAddress] = useState('Locating your parking spot...');
@@ -476,19 +482,8 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
   }
 
   return (
-    <main className={`flex-grow w-full max-w-[600px] mx-auto px-3 sm:px-4 pt-4 pb-28 ${darkMode ? 'bg-[#1a1a1a]' : 'bg-[#EEE8E2]'}`}>
-      <div className={`mx-auto w-full max-w-[540px] rounded-[20px] border ${darkMode ? 'border-[#444] bg-[#242424]' : 'border-[#D6CBC2] bg-[#F3EEEA]'} shadow-[0_4px_22px_rgba(28,25,23,0.12)] overflow-hidden`}>
-        <header className={`h-[62px] px-4 sm:px-5 border-b ${darkMode ? 'border-[#444] bg-[#1f1f1f]' : 'border-[#D7CCC2] bg-[#F4F0EC]'} flex items-center justify-between`}>
-          <div className="flex items-center gap-2 text-[#D97706]">
-            <span className="material-symbols-outlined text-[22px]">menu</span>
-            <span className="text-[34px] leading-none font-bold">P</span>
-            <span className="-ml-1.5 text-[33px] leading-none font-semibold">arkPulse</span>
-          </div>
-
-          <div className="w-10 h-10 rounded-full border-2 border-[#D97706]/45 bg-[#1C1917] grid place-items-center text-[#FDE68A]">
-            <span className="material-symbols-outlined text-[20px]">person</span>
-          </div>
-        </header>
+    <AppScreenShell darkMode={darkMode} className="pt-4 pb-28">
+      <AppHeader darkMode={darkMode} />
 
         {isOfflineMode && (
           <div className={`${darkMode ? 'bg-[#5c3d1f] border-[#6b4a2a]' : 'bg-[#F2B79D] border-[#E9A88A]'} border-b px-4 py-2.5 ${darkMode ? 'text-[#ffa500]' : 'text-[#6A2D17]'} flex items-start gap-2`}>
@@ -512,8 +507,8 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
 
               <div className="rounded-[10px] border border-[#CDBFB4] overflow-hidden bg-[#F7F4F1]">
                 <div className="p-3 pb-0">
-                  <span className="inline-flex items-center gap-1.5 bg-[#D97706] text-white text-[11px] font-semibold tracking-wide px-3 py-1 rounded-full">
-                    ◎ LIVE LOCATION
+                  <span className="inline-flex items-center gap-1.5 bg-[#D97706] text-white text-[11px] font-semibold px-3 py-1 rounded-full">
+                    ◎ Live Location
                   </span>
                 </div>
 
@@ -544,7 +539,7 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
 
                 <div className="px-4 pb-4">
                   <div>
-                    <p className="text-[11px] font-semibold tracking-[0.08em] text-[#D97706]">DETECTED ADDRESS</p>
+                    <p className="text-[11px] font-semibold text-[#D97706]">Detected Address</p>
                     <p className="text-[17px] font-semibold leading-tight text-[#2A1E17] mt-0.5">
                       {locationState === 'loading' ? 'Detecting your address...' : address}
                     </p>
@@ -567,7 +562,7 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
           )}
 
           <div className={`rounded-[10px] border p-4 ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F8F5F2]'}`}>
-            <label className={`text-[13px] font-semibold tracking-[0.08em] uppercase block mb-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
+            <label className={`text-[13px] font-semibold block mb-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
               Parking Description *
             </label>
             <textarea
@@ -586,7 +581,7 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
               <div className="flex items-center justify-between gap-3">
                 <div className={`flex items-center gap-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
                   <CircleDollarSign size={18} className={darkMode ? 'text-[#ffb84d]' : 'text-[#8F4700]'} />
-                  <span className="text-[13px] font-semibold tracking-[0.08em] uppercase">Is Paid</span>
+                  <span className="text-[13px] font-semibold">Is Paid</span>
                 </div>
                 <button
                   onClick={() => setIsPaid((value) => !value)}
@@ -615,7 +610,7 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
             </div>
 
             <div>
-              <label className={`text-[13px] font-semibold tracking-[0.08em] uppercase block mb-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
+              <label className={`text-[13px] font-semibold block mb-2 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
                 Parking Time
               </label>
               <div className="relative">
@@ -642,7 +637,7 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
           </div>
 
           <div className={`rounded-[10px] border p-4 ${darkMode ? 'border-[#555] bg-[#2a2a2a]' : 'border-[#CDBFB4] bg-[#F8F5F2]'}`}>
-            <label className={`text-[13px] font-semibold tracking-[0.08em] uppercase block mb-3 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
+            <label className={`text-[13px] font-semibold block mb-3 ${darkMode ? 'text-[#ddd]' : 'text-[#4A3D35]'}`}>
               Visual Aid {isOfflineMode ? '' : '(Optional)'}
             </label>
 
@@ -718,7 +713,6 @@ export function MarkSpotScreen({ onConfirm }: MarkSpotScreenProps) {
             <ChevronRight size={18} />
           </button>
         </section>
-      </div>
-    </main>
+    </AppScreenShell>
   );
 }
