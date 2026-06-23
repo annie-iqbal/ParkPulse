@@ -4,7 +4,6 @@ import {
   CircleDollarSign,
   Upload,
   WifiOff,
-  ChevronRight,
   CircleOff,
   X,
 } from 'lucide-react';
@@ -489,8 +488,27 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
           <div className={`${darkMode ? 'bg-[#5c3d1f] border-[#6b4a2a]' : 'bg-[#F2B79D] border-[#E9A88A]'} border-b px-4 py-2.5 ${darkMode ? 'text-[#ffa500]' : 'text-[#6A2D17]'} flex items-start gap-2`}>
             <WifiOff size={16} className="mt-0.5" />
             <div>
-              <p className="text-[13px] font-semibold leading-tight">No internet connection. Manual entry required.</p>
-              <p className={`text-[12px] opacity-80 ${darkMode ? 'text-[#ffb84d]' : ''}`}>Your data will sync once you're back online.</p>
+              {/* More specific guidance depending on whether internet, location, or both are unavailable */}
+              {(!isOnline && locationState === 'offline') && (
+                <>
+                  <p className="text-[13px] font-semibold leading-tight">No internet and location unavailable. Manual entry required.</p>
+                  <p className={`text-[12px] opacity-80 ${darkMode ? 'text-[#ffb84d]' : ''}`}>We couldn't detect your GPS location and there's no internet. Your data will sync once you're back online.</p>
+                </>
+              )}
+
+              {(!isOnline && locationState !== 'offline') && (
+                <>
+                  <p className="text-[13px] font-semibold leading-tight">No internet connection.</p>
+                  <p className={`text-[12px] opacity-80 ${darkMode ? 'text-[#ffb84d]' : ''}`}>We can detect your location locally, but data will sync once you're back online.</p>
+                </>
+              )}
+
+              {(isOnline && locationState === 'offline') && (
+                <>
+                  <p className="text-[13px] font-semibold leading-tight">Location unavailable. Manual entry required.</p>
+                  <p className={`text-[12px] opacity-80 ${darkMode ? 'text-[#ffb84d]' : ''}`}>We have internet but couldn't detect GPS. Please describe your spot so you can find it later.</p>
+                </>
+              )}
             </div>
           </div>
         )}

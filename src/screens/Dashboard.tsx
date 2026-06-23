@@ -28,7 +28,9 @@ interface DashboardProps {
 
 function formatRemaining(ms: number): string {
   if (ms <= 0) return '0m';
-  const totalMins = Math.floor(ms / 60000);
+  // Use ceiling for user-facing minute display so a freshly-created 5m
+  // session appears as 5m (not 4m) while preserving 0 when <60s remain.
+  const totalMins = ms < 60000 ? 0 : Math.ceil(ms / 60000);
   const hrs = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
   return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
@@ -451,7 +453,10 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
   }
 
   const isParked = Boolean(activeSession);
-  const minutesLeft = Math.max(0, Math.floor(remainingMs / 60000));
+  // Display logic: show full minutes for users (ceil) but keep "<1 min" behavior
+  // when less than 60 seconds remain. This avoids newly-created 5m sessions
+  // immediately appearing as 4 minutes due to millisecond differences.
+  const minutesLeft = remainingMs <= 0 ? 0 : remainingMs < 60000 ? 0 : Math.ceil(remainingMs / 60000);
   const isParkingExpired = Boolean(activeSession && remainingMs <= 0);
   const reminderMessage = getParkingReminderMessage(minutesLeft, isParkingExpired);
   const reminderSettings = getReminderSettings();
