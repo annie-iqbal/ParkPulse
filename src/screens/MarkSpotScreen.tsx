@@ -24,7 +24,7 @@ interface MarkSpotScreenProps {
 type LocationState = 'loading' | 'ready' | 'offline';
 
 const STORAGE_BUCKET = 'parking-images';
-const DURATION_OPTIONS = [5, 10, 30, 60, 120, 180, 240, 300, 1440];
+const DURATION_OPTIONS = [10, 15, 30, 60, 120, 180, 240, 300, 1440];
 
 function formatTimeOption(minutes: number): string {
   if (minutes === 1440) return 'Full day';
@@ -58,7 +58,7 @@ export function MarkSpotScreen({ onConfirm, onHomeClick, onParkClick, onCheckCli
   const [isSaving, setIsSaving] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [paymentDueInput, setPaymentDueInput] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState(5);
+  const [durationMinutes, setDurationMinutes] = useState(10);
   const [capturedImage, setCapturedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
