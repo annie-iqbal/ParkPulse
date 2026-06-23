@@ -545,9 +545,9 @@ export function Dashboard({ onParkMyCar, onSettingsClick, isVisible = true, acti
                 <CarFront size={42} strokeWidth={2.1} className={darkMode ? 'text-[#ffb84d]' : 'text-white'} />
               </div>
 
-              <p className={`text-[12px] leading-none font-medium ${darkMode ? 'text-[#888]' : 'text-white/90'}`}>Current Status</p>
-              <h2 className={`mt-4 text-[56px] leading-[0.96] font-extrabold tracking-[-0.02em] ${darkMode ? 'text-[#e0e0e0]' : 'text-white'}`}>Not Parked</h2>
-              <p className={`mt-6 text-[20px] leading-[1.35] ${darkMode ? 'text-[#aaa]' : 'text-white/92'} font-normal max-w-[420px] mx-auto`}>
+              <p className="text-[12px] leading-none font-medium text-white/95">Current Status</p>
+              <h2 className="mt-4 text-[56px] leading-[0.96] font-extrabold tracking-[-0.02em] text-white">Not Parked</h2>
+              <p className="mt-6 text-[20px] leading-[1.35] text-white/93 font-normal max-w-[420px] mx-auto">
                 Find the best available parking
                 <br />
                 spot near your destination.

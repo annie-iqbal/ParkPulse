@@ -24,84 +24,88 @@ interface AnalyzeRequest {
 }
 
 const SYSTEM_PROMPT = `You are an expert parking sign analyzer for Australian cities.
-You analyze photos of parking signs and return a structured JSON response indicating whether parking is currently allowed.
-You are skilled at parsing complex, multi-zone stacked parking signs with different rules for different times/days.
+Analyze parking sign photos and return ONLY valid JSON - no markdown, no explanations.
 
-KEY PARSING RULES:
-1. Multi-zone signs: Each box/zone represents separate, distinct parking rules. Evaluate the zone that applies NOW.
-2. Day types: 
-   - "SCHOOL DAYS" = Monday-Friday during school term (non-holidays)
-   - "SATURDAYS" / "SAT" = Saturday only
-   - "OTHER DAYS" / "MON-SAT" = All weekdays and Saturday
-   - "SUN & PUBLIC HOLIDAYS" = Sunday or public holiday dates
-3. Time matching: Given current time, find ALL matching time slots and determine longest allowed duration
-4. School zones: If "SCHOOL" appears, apply SCHOOL DAYS rule only on weekday school days
-5. No continuous match = NO PARKING allowed
+MULTI-ZONE SIGNS: When a sign has multiple boxes/panels (left/right, top/bottom, stacked):
+- Each box is a SEPARATE parking rule
+- Transcribe ALL boxes and describe their position (e.g., "Left panel", "Right panel", "Top", "Bottom")
+- Evaluate which box(es) match the current day/time
+- If multiple boxes match, pick the longest duration
+- If no box matches, verdict is NO PARKING
 
-ANALYSIS PROCESS:
-1. Transcribe ALL text from ALL zones/panels on the sign
-2. Parse each zone as a separate rule set
-3. For current time/day, identify which zone(s) apply
-4. If multiple zones apply, choose the one with longest duration
-5. If no zone matches current time/day, verdict is NO PARKING
+DAY TYPES:
+- "SCHOOL DAYS" = Monday-Friday (non-holidays)
+- "SATURDAYS" / "SAT" = Saturday only  
+- "OTHER DAYS" = Any day not specified
+- "SUN" / "PUBLIC HOLIDAYS" = Sunday or public holidays
 
-Always respond with valid JSON only - no markdown, no explanation, just the JSON object.`;
+TIME MATCHING: A box applies if current time falls within its time ranges AND day matches.
+
+CONTEXTCARDS: For each zone that exists (matching or not), create a contextCard explaining:
+- What the zone allows
+- When it applies (days/times)
+- Whether it matches current conditions
+
+REGULATORY BREAKDOWN: Add items explaining:
+- Time match (Does current time fall in allowed range?)
+- Day match (Does current day match restrictions?)
+- Zone selection (Which zone has priority if multiple match?)
+- Duration allowed
+
+CRITICAL: Always return valid JSON with populated contextCards and regulatoryBreakdown. Never return empty arrays.`;
 
 function buildUserPrompt(req: AnalyzeRequest): string {
   const dayType = req.isPublicHoliday 
     ? "Public Holiday" 
     : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].includes(req.currentDay)
-      ? "Weekday (School Day)"
+      ? "Weekday"
       : "Weekend";
   
-  return `Analyze this parking sign photo. Handle multi-zone/stacked signs carefully.
-
-CURRENT CONDITIONS:
-- Time: ${req.currentTime} (24-hour format)
-- Day: ${req.currentDay}
-- Day Type: ${dayType}
-- Public Holiday: ${req.isPublicHoliday ? "YES" : "NO"}
+  return `Analyze this parking sign thoroughly. Current conditions:
+- Time: ${req.currentTime} (${dayType}, ${req.currentDay})
 - Location: ${req.location ?? "Unknown"}
 
-MULTI-ZONE SIGN INSTRUCTIONS:
-If the sign has multiple boxes/sections (stacked or side-by-side):
-1. Treat each box as a separate, independent parking rule
-2. Transcribe text from EACH box separately
-3. Determine which box(es) apply to the CURRENT day/time
-4. If "SCHOOL DAYS" appears in a box: only apply that box on weekday school days (Mon-Fri, non-holiday)
-5. If time slot doesn't match current time: that box does NOT apply
-6. Pick the box with the LONGEST allowed duration that matches current day/time
-7. If NO box matches current day/time: verdict is NO PARKING
+INSTRUCTIONS:
+1. Identify EACH distinct zone/panel (left, right, top, bottom, etc.)
+2. For EACH zone: transcribe text, identify day restrictions, time ranges
+3. Determine which zone(s) match BOTH current day AND time
+4. Build rich response with detailed breakdown
 
-Return a JSON object with EXACTLY this structure:
+Return EXACTLY this JSON (with real data):
 {
   "canPark": boolean,
   "verdict": "YES, YOU CAN PARK" or "NO PARKING",
-  "description": "One sentence explaining current parking status based on matching zone(s)",
-  "maxDuration": "e.g. '2 Hours' or '5 Minutes' or null if unrestricted",
-  "until": "e.g. '4:00 PM' or null",
-  "rawSignText": "Full transcription of all text from all zones/boxes on the sign",
-  "activeZone": "Description of which zone/box applies right now",
+  "description": "Detailed explanation of which zone applies and why",
+  "maxDuration": "e.g. '2 Hours' or null",
+  "until": "e.g. '2:30 PM' or null",
+  "rawSignText": "Full transcription of ALL zones",
+  "activeZone": "Which zone(s) apply now",
   "contextCards": [
     {
-      "icon": "material_symbol_name",
-      "iconBg": "#hex color",
-      "iconColor": "#hex color",
-      "title": "Card title",
-      "description": "Explanation",
+      "icon": "info",
+      "iconBg": "#2a2a2a",
+      "iconColor": "#ffb84d",
+      "title": "Zone name (e.g., 'Right Panel')",
+      "description": "What this zone allows/restricts",
+      "colSpan": 2
+    },
+    {
+      "icon": "schedule",
+      "iconBg": "#2a2a2a",
+      "iconColor": "#ffb84d",
+      "title": "Time Restrictions",
+      "description": "When this zone applies",
       "colSpan": 2
     }
   ],
   "regulatoryBreakdown": [
     {
-      "status": "ok" | "warning" | "error" | "info",
-      "title": "Check name",
-      "detail": "Detail"
+      "status": "ok" or "warning" or "error" or "info",
+      "title": "Check name (e.g., 'Time Match')",
+      "detail": "Explanation (e.g., '10:07 AM falls within 9:30 AM - 2:30 PM')"
     }
   ]
-}
-
-CRITICAL: For time ranges like "9AM-2:30PM", check if ${req.currentTime} falls within. Be precise with time matching.`;
+}`;
 }
 
 Deno.serve(async (req: Request) => {
@@ -178,10 +182,96 @@ Deno.serve(async (req: Request) => {
 
     let parsed: Record<string, unknown>;
     try {
-      const clean = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Remove markdown code blocks
+      const clean = content
+        .replace(/```json\s*/g, "")
+        .replace(/```\s*/g, "")
+        .trim();
+      
       parsed = JSON.parse(clean);
-    } catch {
-      return jsonResponse({ error: "Failed to parse AI response", raw: content }, 502);
+      
+      // Ensure required fields exist and have content
+      if (!parsed.canPark || !parsed.verdict) {
+        console.error("Missing required fields in response:", parsed);
+        return jsonResponse({
+          canPark: false,
+          verdict: "NO PARKING",
+          description: "Unable to determine parking status",
+          maxDuration: null,
+          until: null,
+          rawSignText: content,
+          activeZone: "Unknown",
+          contextCards: [
+            {
+              icon: "error",
+              iconBg: "#2a2a2a",
+              iconColor: "#ff6b6b",
+              title: "Analysis Error",
+              description: "Could not analyze this parking sign",
+              colSpan: 2
+            }
+          ],
+          regulatoryBreakdown: [
+            {
+              status: "error",
+              title: "Sign Analysis",
+              detail: "Unable to determine parking status from sign"
+            }
+          ]
+        });
+      }
+      
+      // Ensure contextCards and regulatoryBreakdown have content
+      if (!parsed.contextCards || parsed.contextCards.length === 0) {
+        parsed.contextCards = [
+          {
+            icon: "info",
+            iconBg: "#2a2a2a",
+            iconColor: "#ffb84d",
+            title: "Parking Information",
+            description: parsed.description || "See regulatory breakdown for details",
+            colSpan: 2
+          }
+        ];
+      }
+      
+      if (!parsed.regulatoryBreakdown || parsed.regulatoryBreakdown.length === 0) {
+        parsed.regulatoryBreakdown = [
+          {
+            status: parsed.canPark ? "ok" : "error",
+            title: "Parking Status",
+            detail: parsed.description || (parsed.canPark ? "Parking allowed" : "No parking")
+          }
+        ];
+      }
+    } catch (parseErr) {
+      console.error("JSON parse error:", parseErr, "Content:", content);
+      return jsonResponse({
+        canPark: false,
+        verdict: "NO PARKING",
+        description: "Error analyzing sign",
+        maxDuration: null,
+        until: null,
+        rawSignText: content,
+        activeZone: "Error",
+        contextCards: [
+          {
+            icon: "error",
+            iconBg: "#2a2a2a",
+            iconColor: "#ff6b6b",
+            title: "Analysis Error",
+            description: "Could not parse sign analysis",
+            colSpan: 2
+          }
+        ],
+        regulatoryBreakdown: [
+          {
+            status: "error",
+            title: "Sign Analysis",
+            detail: "Error analyzing this parking sign"
+          }
+        ]
+      }, 200);
     }
 
     return jsonResponse(parsed);
